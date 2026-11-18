@@ -1,6 +1,6 @@
 // Service worker de Mi Plan Semanal: guarda la app en el teléfono para usarla sin internet.
 // La versión cambia sola con cada actualización del código.
-const CACHE = "plan-semanal-b8d71339";
+const CACHE = "plan-semanal-ac4de3a1";
 const ARCHIVOS = [
   "./",
   "index.html",

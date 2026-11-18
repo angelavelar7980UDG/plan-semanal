@@ -886,7 +886,7 @@ button.pill:active { transform: scale(.95); }
     ]
   };
   var PLANS = {
-    angel: { slots: ANGEL_SLOTS, meals: ANGEL_MEALS, mver: 1, body: ANGEL_BODY, cardio: ANGEL_CARDIO },
+    angel: { slots: ANGEL_SLOTS, meals: ANGEL_MEALS, mver: 1, body: ANGEL_BODY, cardio: ANGEL_CARDIO, dash: { kg: 75, stepGoal: 8000 } },
     macarena: { slots: MAC_SLOTS, meals: MAC_MEALS, body: MAC_BODY, cardio: MAC_CARDIO, goal: [1500, 1600], dash: { kg: 60, stepGoal: 8000 } }
   };
 
@@ -1613,7 +1613,7 @@ button.pill:active { transform: scale(.95); }
   function heroStatsHTML() {
     var plan = PLANS[S.profile];
     if (!plan.dash) return "";
-    var g = plan.goal || [0, 0];
+    var g = plan.goal || range();
     return '<div class="hstats">' +
       '<div class="hs"><small>Consumidas hoy</small><b><span id="d-cons" class="tnum">0</span><i>kcal</i></b>' +
       '<span class="hbar" role="progressbar" aria-label="Calorías consumidas" aria-valuemin="0" aria-valuemax="' + g[1] + '"><i class="fill" id="d-cons-f"></i></span>' +
@@ -1652,16 +1652,16 @@ button.pill:active { transform: scale(.95); }
   }
   function paintDash() {
     if (!document.getElementById("d-cons")) return;
-    var plan = PLANS[S.profile], g = plan.goal || [0, 0], d = dashData();
+    var plan = PLANS[S.profile], g = plan.goal || range(), d = dashData();
     var burn = d.kSteps + d.kRut + d.kCar;
     countTo(document.getElementById("d-cons"), d.cons, 700);
     countTo(document.getElementById("d-burn"), burn, 700);
     setBar("d-cons-f", g[1] ? d.cons / g[1] : 0);
     var cap;
-    if (d.n < d.total) cap = "Meta " + fmt(g[0]) + "–" + fmt(g[1]) + " kcal";
-    else if (d.cons < g[0]) cap = fmt(g[0] - d.cons) + " bajo la meta";
-    else if (d.cons > g[1]) cap = fmt(d.cons - g[1]) + " sobre la meta";
-    else cap = "Dentro de la meta";
+    if (d.n < d.total) cap = (plan.goal ? "Meta " : "Plan · ") + fmt(g[0]) + "–" + fmt(g[1]) + " kcal";
+    else if (d.cons < g[0]) cap = fmt(g[0] - d.cons) + " bajo " + (plan.goal ? "la meta" : "el plan");
+    else if (d.cons > g[1]) cap = fmt(d.cons - g[1]) + " sobre " + (plan.goal ? "la meta" : "el plan");
+    else cap = "Dentro de" + (plan.goal ? " la meta" : "l plan");
     setTxt("d-cons-c", cap);
     setTxt("d-bs", fmt(d.kSteps));
     setTxt("d-br", fmt(d.kRut));
