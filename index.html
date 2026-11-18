@@ -2042,10 +2042,27 @@ button.pill:active { transform: scale(.95); }
 </script>
 
 <script>
-// modo sin conexión: la primera vez, abre la app con internet para que se guarde todo
+// modo sin conexión: la primera vez, abre la app con internet para que se guarde todo.
+// Cuando hay una versión nueva, la app se recarga sola para mostrarla.
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+  var teniaVersion = !!navigator.serviceWorker.controller;
+  var yaRecargo = false;
+  var recargar = function () {
+    var a = document.activeElement;
+    if (a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) { a.addEventListener("blur", recargar, { once: true }); return; }
+    location.reload();
+  };
+  navigator.serviceWorker.addEventListener("controllerchange", function () {
+    if (!teniaVersion || yaRecargo) return;   // la primera instalación no recarga
+    yaRecargo = true;
+    recargar();
+  });
   window.addEventListener("load", function () {
-    navigator.serviceWorker.register("sw.js").catch(function () {});
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(function (reg) {
+      var buscar = function () { reg.update().catch(function () {}); };
+      document.addEventListener("visibilitychange", function () { if (!document.hidden) buscar(); });
+      setInterval(buscar, 15 * 60 * 1000);
+    }).catch(function () {});
   });
 }
 </script>

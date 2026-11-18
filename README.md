@@ -19,7 +19,9 @@ App personal de comida y ejercicio (perfiles Angel y Macarena). Se instala en el
 
 ## Actualizar la app
 
-Cuando se suba una versión nueva a GitHub, la app instalada la descarga sola la próxima vez que la abras con internet y la usa la siguiente vez que la abras (cierra la app deslizándola hacia arriba y vuelve a abrirla).
+Cuando se sube una versión nueva a GitHub, la app instalada la detecta sola al abrirla con internet (o al volver a ella desde otra app) y se recarga con la versión nueva. Tus datos no se borran. GitHub Pages tarda 1 o 2 minutos en publicar después de cada subida.
+
+La primera vez que una instalación pasa de una versión sin esta función a una con ella, hacen falta dos aperturas: abre la app con internet, espera unos segundos, ciérrala deslizándola hacia arriba y ábrela otra vez.
 
 ## Pasos de Apple Salud
 
@@ -38,7 +40,7 @@ Es un sitio estático (sin build):
 | `fonts/` | Tipografías (Unbounded y DM Sans) alojadas aquí para no depender de internet |
 | `icons/` | Íconos de la app |
 
-Al cambiar cualquier archivo, sube el número de `CACHE` en `sw.js` (por ejemplo `plan-semanal-v2`) para que los teléfonos descarguen la versión nueva. Si agregas fotos o archivos nuevos, añádelos también a la lista `ARCHIVOS` de `sw.js`.
+Al cambiar cualquier archivo, cambia el nombre de `CACHE` en `sw.js` (por ejemplo `plan-semanal-v3`) para que los teléfonos descarguen la versión nueva. Si agregas fotos o archivos nuevos, añádelos también a la lista `ARCHIVOS` de `sw.js`.
 
 Para probarlo en local (el service worker requiere `http://localhost`, no `file://`):
 

@@ -1,6 +1,6 @@
 // Service worker de Mi Plan Semanal: guarda la app en el teléfono para usarla sin internet.
 // La versión cambia sola con cada actualización del código.
-const CACHE = "plan-semanal-ac4de3a1";
+const CACHE = "plan-semanal-5d63de4e";
 const ARCHIVOS = [
   "./",
   "index.html",
@@ -56,8 +56,14 @@ const ARCHIVOS = [
   "fotos/yogurtFrutos.jpg"
 ];
 
+// Al instalar una versión nueva se baja todo directo de internet ("reload"), sin usar el caché
+// de 10 minutos que pone GitHub Pages; si no, la versión nueva podría guardar archivos viejos.
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ARCHIVOS)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE)
+      .then((c) => Promise.all(ARCHIVOS.map((u) => c.add(new Request(u, { cache: "reload" })))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", (e) => {
@@ -68,7 +74,7 @@ self.addEventListener("activate", (e) => {
   );
 });
 
-// Primero lo guardado (arranca al instante y sin internet); si hay internet, se actualiza en segundo plano.
+// Primero lo guardado (arranca al instante y sin internet); con internet se revisa en segundo plano.
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
@@ -76,15 +82,16 @@ self.addEventListener("fetch", (e) => {
   if (url.origin !== location.origin) return;
   e.respondWith(
     caches.match(req, { ignoreSearch: true }).then((hit) => {
-      const red = fetch(req)
+      const red = fetch(req.url, { cache: "no-cache" })
         .then((res) => {
           if (res && res.ok) {
             const copia = res.clone();
-            caches.open(CACHE).then((c) => c.put(req, copia));
+            caches.open(CACHE).then((c) => c.put(req.url, copia));
           }
           return res;
         })
         .catch(() => hit || (req.mode === "navigate" ? caches.match("index.html") : undefined));
+      if (hit) e.waitUntil(red.catch(() => {}));
       return hit || red;
     })
   );
