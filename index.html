@@ -1,0 +1,2053 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mi Plan Semanal</title>
+<meta name="description" content="Plan semanal de comida y ejercicio. Funciona sin internet.">
+<meta name="theme-color" content="#ffffff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mi Plan">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+:root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; font: 14px system-ui, sans-serif; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+<style>
+/* Layout: bloques de color grandes. Selector de perfil = dos paneles a pantalla casi completa (toque = entra con una ola de color). Inicio = panel de saludo + dos mosaicos. Comida = panel de hoy con el anillo de los 5 tiempos, luego cada tiempo con 3 opciones que se rellenan de color al elegirlas. */
+:root {
+  color-scheme: light;
+  --bg: #FFFFFF;
+  --surface: #FFFFFF;
+  --surface-2: #EEEFF6;
+  --ink: #12142A;
+  --muted: #5E6280;
+  --line: #E0E2EE;
+  --header-bg: rgba(255, 255, 255, .86);
+  /* un color por perfil; --accent toma el del perfil activo */
+  --prof-a: #2F54EB; --prof-a-ink: #FFFFFF; --prof-a-soft: #E4E9FF;
+  --prof-m: #C026D3; --prof-m-ink: #FFFFFF; --prof-m-soft: #FAE3FC;
+  --accent: var(--prof-a); --accent-ink: var(--prof-a-ink); --accent-soft: var(--prof-a-soft);
+  --p: #0E9F9A; --c: #E59A00; --f: #EE5B3A;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --font-display: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --font-body: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+:root[data-profile="angel"] { --accent: var(--prof-a); --accent-ink: var(--prof-a-ink); --accent-soft: var(--prof-a-soft); }
+:root[data-profile="macarena"] { --accent: var(--prof-m); --accent-ink: var(--prof-m-ink); --accent-soft: var(--prof-m-soft); }
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.5;
+  padding-block: 16px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--bg); }
+.shell { max-width: 1040px; margin-inline: auto; }
+h1, h2, h3, h4, p, ul, ol, dl, dd { margin: 0; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: inherit; }
+button, a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+a { color: inherit; }
+svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 12px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+b, dd, .tnum { font-variant-numeric: tabular-nums; }
+.link { color: var(--accent); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; padding: 8px 2px; }
+
+@keyframes rise { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes letter { from { transform: translateY(108%); } to { transform: none; } }
+@keyframes ping { from { transform: scale(1); opacity: .55; } to { transform: scale(3.2); opacity: 0; } }
+@keyframes draw { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes run { from { stroke-dashoffset: 30; } to { stroke-dashoffset: -100; } }
+
+/* pastilla translúcida sobre color */
+.pill { position: relative; isolation: isolate; overflow: hidden; display: inline-flex; align-items: center; gap: 8px; border-radius: 99px; padding: 9px 15px; font-weight: 700; font-size: .875rem; line-height: 1.2; transition: transform 160ms var(--ease-out); }
+.pill::before { content: ""; position: absolute; inset: 0; background: currentColor; opacity: .16; z-index: -1; }
+button.pill:active { transform: scale(.95); }
+.pill svg { width: 1.1em; height: 1.1em; }
+
+/* avatar */
+.av { --s: 40px; width: var(--s); height: var(--s); border-radius: 50%; display: grid; place-items: center; flex: none; font-family: var(--font-display); font-weight: 800; font-size: calc(var(--s) * .36); letter-spacing: -.02em; line-height: 1; }
+.av.angel { background: var(--prof-a); color: var(--prof-a-ink); }
+.av.macarena { background: var(--prof-m); color: var(--prof-m-ink); }
+
+/* ola de color al entrar a un perfil */
+.wipe { position: fixed; inset: 0; z-index: 100; }
+.wipe.angel { background: var(--prof-a); }
+.wipe.macarena { background: var(--prof-m); }
+
+/* barra superior de páginas internas */
+.top { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 8px); z-index: 20; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; margin-bottom: 18px; padding: 6px; border-radius: 99px; background: var(--header-bg); -webkit-backdrop-filter: blur(18px) saturate(170%); backdrop-filter: blur(18px) saturate(170%); border: 1px solid var(--line); }
+.top > :first-child { justify-self: start; }
+.top > :last-child { justify-self: end; }
+.back { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); text-decoration: none; transition: transform 160ms var(--ease-out); }
+.back:active { transform: scale(.92); }
+.top .av { --s: 44px; }
+.top-title { font-family: var(--font-display); font-weight: 700; font-size: .9375rem; letter-spacing: -.02em; }
+@media (prefers-reduced-transparency: reduce) { .top { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+
+/* selector de perfil */
+.pick { min-height: calc(100svh - 96px); display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 18px; }
+.pick-title { font-family: var(--font-display); font-weight: 800; font-size: clamp(1.8rem, 7vw, 2.8rem); letter-spacing: -.045em; line-height: 1.05; padding-top: 2vh; animation: rise 480ms var(--ease-out) backwards; }
+.pick-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.pcard { container-type: inline-size; position: relative; overflow: hidden; isolation: isolate; border-radius: 32px; min-height: 280px; padding: 24px; display: flex; flex-direction: column; justify-content: flex-end; background: var(--c0); color: var(--c0-ink); animation: rise 540ms var(--ease-out) backwards; transition: transform 200ms var(--ease-out); }
+.pcard.angel { --c0: var(--prof-a); --c0-ink: var(--prof-a-ink); }
+.pcard.macarena { --c0: var(--prof-m); --c0-ink: var(--prof-m-ink); animation-delay: 90ms; }
+.pcard:active { transform: scale(.98); }
+.pc-mono { position: absolute; right: -3%; top: -9%; z-index: -1; font-family: var(--font-display); font-weight: 800; font-size: clamp(11rem, 44vw, 20rem); line-height: 1; letter-spacing: -.08em; opacity: .15; pointer-events: none; transition: transform 600ms var(--ease-out); }
+.pc-go { position: absolute; left: 24px; top: 24px; width: 48px; height: 48px; border-radius: 50%; border: 2px solid currentColor; display: grid; place-items: center; }
+.pc-name { max-width: 100%; font-family: var(--font-display); font-weight: 800; font-size: clamp(1.5rem, 6.5vw, 2.6rem); font-size: clamp(1.4rem, 12.5cqw, 3.2rem); line-height: .98; letter-spacing: -.05em; }
+.pc-name span { display: block; overflow-wrap: anywhere; }
+@media (hover: hover) and (pointer: fine) {
+  .pcard:hover { transform: translateY(-4px); }
+  .pcard:hover:active { transform: scale(.98); }
+  .pcard:hover .pc-mono { transform: translate(-3%, 3%) scale(1.07); }
+}
+@media (max-width: 640px) {
+  .pick-grid { grid-template-columns: 1fr; grid-template-rows: repeat(2, minmax(0, 1fr)); }
+  .pcard { min-height: 200px; }
+}
+
+/* inicio */
+.home-hero { position: relative; overflow: hidden; isolation: isolate; border-radius: 36px; background: var(--accent); color: var(--accent-ink); padding: 20px 22px 26px; min-height: 320px; display: flex; flex-direction: column; justify-content: space-between; gap: 40px; }
+.hero-mono { position: absolute; right: -2%; bottom: -22%; z-index: -1; font-family: var(--font-display); font-weight: 800; font-size: clamp(15rem, 60vw, 26rem); line-height: 1; letter-spacing: -.08em; opacity: .14; pointer-events: none; }
+.hero-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.hello { display: grid; gap: 4px; }
+.hello-small { font-size: 1.125rem; font-weight: 500; opacity: .9; }
+.hello-name { display: block; overflow: hidden; padding-bottom: .1em; font-family: var(--font-display); font-weight: 800; font-size: clamp(2.5rem, 11.5vw, 5.75rem); line-height: .98; letter-spacing: -.055em; }
+.ch { display: inline-block; }
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+.tile { position: relative; overflow: hidden; border-radius: 32px; min-height: 260px; padding: 22px; display: flex; flex-direction: column; justify-content: space-between; gap: 24px; text-decoration: none; transition: transform 200ms var(--ease-out); }
+.tile:active { transform: scale(.97); }
+@media (hover: hover) and (pointer: fine) { .tile:hover { transform: translateY(-5px); } .tile:hover:active { transform: scale(.97); } }
+.tile.food { background: var(--surface); border: 1.5px solid var(--line); }
+.tile.ex { background: var(--surface); border: 1.5px solid var(--line); }
+.tile h2 { font-family: var(--font-display); font-weight: 800; font-size: clamp(1.7rem, 6.5vw, 2.5rem); letter-spacing: -.05em; line-height: 1; }
+.tile-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.go { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; flex: none; border: 2px solid currentColor; transition: transform 240ms var(--ease-out); }
+.tile.food .go { color: var(--accent); }
+.tile.ex .go { color: var(--f); }
+@media (hover: hover) and (pointer: fine) { .tile:hover .go { transform: translateX(4px); } }
+.mini { position: relative; width: 112px; aspect-ratio: 1; color: var(--accent); }
+.mini .ringsvg { width: 100%; height: 100%; }
+.mini-n { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--font-display); font-weight: 800; font-size: 1.125rem; letter-spacing: -.04em; color: var(--ink); }
+.ekg { width: 100%; max-width: 190px; height: 64px; color: var(--ink); overflow: visible; }
+.ekg path { fill: none; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.ekg .base { stroke: currentColor; opacity: .22; }
+.ekg .run { stroke: var(--f); stroke-dasharray: 30 100; stroke-dashoffset: 30; animation: run 2.6s linear infinite; }
+.fresh .home-hero { animation: rise 560ms var(--ease-out) backwards; }
+.fresh .hello-small { animation: rise 480ms var(--ease-out) 120ms backwards; }
+.fresh .ch { animation: letter 560ms var(--ease-out) backwards; animation-delay: calc(var(--i) * 45ms + 200ms); }
+.fresh .tile { animation: rise 520ms var(--ease-out) backwards; }
+.fresh .tile:nth-child(1) { animation-delay: 300ms; }
+.fresh .tile:nth-child(2) { animation-delay: 380ms; }
+
+/* panel de hoy (comida / ejercicio) */
+.hero { position: relative; overflow: hidden; isolation: isolate; border-radius: 36px; background: var(--accent); color: var(--accent-ink); padding: 22px; display: grid; gap: 22px; }
+.hero-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 26px; align-items: center; }
+.hero-date { display: grid; gap: 10px; justify-items: start; }
+.dow { font-family: var(--font-display); font-weight: 800; font-size: clamp(1.15rem, 5vw, 2.4rem); letter-spacing: -.05em; line-height: 1.05; }
+.dnum { font-family: var(--font-display); font-weight: 800; font-size: clamp(6rem, 24vw, 10rem); line-height: .8; letter-spacing: -.09em; margin-left: -.04em; }
+.mon { font-weight: 700; letter-spacing: .16em; text-transform: uppercase; font-size: .8125rem; opacity: .9; }
+.hero-ring { display: grid; gap: 14px; justify-items: center; }
+.ring { position: relative; width: min(100%, 250px); aspect-ratio: 1; }
+.ringsvg { display: block; width: 100%; height: 100%; overflow: visible; }
+.arc-t { fill: none; stroke: currentColor; opacity: .2; }
+.arc { fill: none; stroke: currentColor; stroke-dasharray: var(--L) 700; stroke-dashoffset: var(--L); transition: stroke-dashoffset 560ms var(--ease-out); }
+.arc.on { stroke-dashoffset: 0; }
+.boot .arc { transition-delay: calc(var(--i) * 90ms + 150ms); }
+.mini .arc-t { opacity: .16; }
+.ring-c { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.ring-n { font-family: var(--font-display); font-weight: 800; font-size: clamp(1.9rem, 7.5vw, 2.5rem); letter-spacing: -.06em; line-height: 1; }
+.ring-u { margin-top: 6px; font-size: .75rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; opacity: .85; }
+.snav { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.sn { position: relative; isolation: isolate; overflow: hidden; border-radius: 99px; padding: 7px 13px; font-size: .8125rem; font-weight: 700; transition: transform 160ms var(--ease-out), color 200ms ease; }
+.sn::before { content: ""; position: absolute; inset: 0; z-index: -1; background: currentColor; opacity: .16; transition: background-color 200ms ease, opacity 200ms ease; }
+.sn.on { color: var(--accent); }
+.sn.on::before { background: var(--accent-ink); opacity: 1; }
+.sn:active { transform: scale(.94); }
+.hchips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.hchip { position: relative; isolation: isolate; overflow: hidden; padding: 12px 14px; border-radius: 20px; display: grid; gap: 2px; }
+.hchip::before { content: ""; position: absolute; inset: 0; z-index: -1; background: currentColor; opacity: .16; }
+.hchip small { font-size: .75rem; font-weight: 500; opacity: .9; }
+.hchip b { font-family: var(--font-display); font-weight: 700; font-size: 1.25rem; letter-spacing: -.04em; }
+.hrange { font-size: .875rem; opacity: .9; }
+.hero.ex-hero { gap: 26px; min-height: 300px; align-content: space-between; }
+.hero.ex-hero .dow { font-size: clamp(2.4rem, 11vw, 5rem); letter-spacing: -.06em; }
+.hero .ekg { color: var(--accent-ink); max-width: 280px; height: 76px; }
+.hero .ekg .run { stroke: currentColor; }
+.hero .ekg .base { opacity: .28; }
+.coming { margin-top: 14px; border: 2px dashed var(--line); border-radius: 28px; padding: 26px 22px; font-family: var(--font-display); font-weight: 700; font-size: 1.25rem; letter-spacing: -.04em; color: var(--muted); }
+
+/* tiempos de comida */
+.slot { margin-top: 44px; scroll-margin-top: 84px; }
+.slot-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 6px 16px; flex-wrap: wrap; }
+.slot-head h2 { font-family: var(--font-display); font-weight: 800; font-size: clamp(1.45rem, 5.2vw, 2rem); letter-spacing: -.05em; line-height: 1.05; display: flex; align-items: center; gap: 6px 14px; flex-wrap: wrap; }
+.slot-head h2 small { font-family: var(--font-body); font-size: .875rem; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+.now { position: relative; padding-left: 17px; font-family: var(--font-body); font-size: .6875rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.now::before, .now::after { content: ""; position: absolute; left: 0; top: 50%; width: 9px; height: 9px; margin-top: -4.5px; border-radius: 50%; background: var(--accent); }
+.now::after { animation: ping 1.9s var(--ease-out) infinite; }
+.slot-meta { color: var(--muted); font-size: .875rem; font-weight: 500; }
+.opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-top: 14px; }
+.opt { position: relative; isolation: isolate; overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding: 10px; border-radius: 30px; background: var(--surface); border: 1.5px solid var(--line); color: var(--ink); min-width: 0; transition: border-color 160ms ease, color 220ms ease, transform 160ms var(--ease-out); }
+.opt::before { content: ""; position: absolute; inset: -1px; z-index: -1; background: var(--accent); clip-path: circle(0% at var(--x, 50%) var(--y, 50%)); transition: clip-path 540ms var(--ease-out); }
+.opt.on::before { clip-path: circle(150% at var(--x, 50%) var(--y, 50%)); }
+.opt.on { color: var(--accent-ink); border-color: var(--accent); }
+.opt:active { transform: scale(.975); }
+@media (hover: hover) and (pointer: fine) { .opt:hover:not(.on) { border-color: var(--accent); } .opt:hover .opt-art { transform: scale(1.05); } .opt.on:hover .opt-art { transform: scale(1.08); } }
+.opt-img { position: relative; display: block; aspect-ratio: 10 / 7; border-radius: 22px; overflow: hidden; background: var(--ba, #F1ECE0); }
+.opt-art { display: block; width: 100%; height: 100%; transition: transform 640ms var(--ease-out); }
+.opt.on .opt-art { transform: scale(1.08); }
+.art { display: block; width: 100%; height: 100%; stroke: none; fill: currentColor; object-fit: cover; }
+.tag { position: absolute; left: 10px; top: 10px; z-index: 1; font-size: .6875rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; line-height: 1.2; color: #12142A; background: rgba(255, 255, 255, .92); border-radius: 99px; padding: 5px 10px; }
+.tick { position: absolute; right: 10px; top: 10px; z-index: 1; width: 28px; height: 28px; border-radius: 50%; background: var(--accent-ink); color: var(--accent); display: grid; place-items: center; opacity: 0; transform: scale(.5); transition: opacity 160ms ease, transform 280ms var(--ease-out); }
+.opt.on .tick { opacity: 1; transform: none; }
+.tick svg { width: 17px; height: 17px; stroke-width: 2.8; }
+.opt-body { display: grid; gap: 6px; padding: 2px 10px 10px; }
+.opt-name { font-weight: 700; font-size: 1.125rem; line-height: 1.2; letter-spacing: -.015em; text-wrap: balance; }
+.opt-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; color: var(--muted); font-size: .875rem; transition: color 220ms ease; }
+.opt-meta b { color: var(--ink); font-size: 1.0625rem; transition: color 220ms ease; }
+.opt.on .opt-meta, .opt.on .opt-meta b { color: inherit; }
+.opt-meta svg { width: 15px; height: 15px; }
+.more { display: none; margin-left: auto; font-weight: 700; font-size: .8125rem; text-decoration: underline; text-underline-offset: 3px; }
+.opt.on.closed .more { display: inline; }
+
+/* detalle: se despliega bajo las opciones; es una transición, así que se puede interrumpir */
+.detail-wrap { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 320ms var(--ease-out); }
+.detail-wrap.open { grid-template-rows: 1fr; }
+.detail-clip { min-height: 0; overflow: hidden; visibility: hidden; transition: visibility 0s linear 320ms; }
+.detail-wrap.open .detail-clip { visibility: visible; transition-delay: 0s; }
+.detail-in { opacity: 0; transform: translateY(10px); transition: opacity 240ms var(--ease-out), transform 280ms var(--ease-out); }
+.detail-wrap.open .detail-in { opacity: 1; transform: none; }
+.detail { margin-top: 12px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 30px; padding: 24px; display: grid; gap: 24px; }
+.d-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px 16px; flex-wrap: wrap; }
+.d-head h3 { font-weight: 700; font-size: 1.1875rem; line-height: 1.25; max-width: 32ch; }
+.d-actions { display: flex; gap: 16px; }
+.d-kcal { display: flex; align-items: flex-end; gap: 10px; }
+.d-kcal b { font-family: var(--font-display); font-weight: 800; font-size: clamp(3.4rem, 14vw, 5.2rem); line-height: .85; letter-spacing: -.08em; color: var(--accent); }
+.d-kcal span { color: var(--muted); font-weight: 500; padding-bottom: 4px; }
+.mbar { display: flex; height: 12px; border-radius: 99px; overflow: hidden; animation: draw 560ms var(--ease-out) 160ms both; }
+.mbar i { display: block; height: 100%; }
+.mbar i + i { border-left: 3px solid var(--surface); }
+.mbar .p, .sw.p { background: var(--p); } .mbar .c, .sw.c { background: var(--c); } .mbar .f, .sw.f { background: var(--f); }
+.sw { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+.sw.x { background: var(--muted); opacity: .55; }
+.mgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.mt { background: var(--surface-2); border-radius: 20px; padding: 12px 14px; display: grid; gap: 4px; min-width: 0; }
+.mt small { font-size: .8125rem; color: var(--muted); display: flex; align-items: center; gap: 7px; font-weight: 500; }
+.mt b { font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; letter-spacing: -.05em; line-height: 1.1; }
+.mt b i { font-style: normal; font-family: var(--font-body); font-weight: 500; font-size: .8125rem; letter-spacing: 0; color: var(--muted); margin-left: 2px; }
+.d-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 36px; }
+.d-cols h4 { font-size: .8125rem; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); font-weight: 700; margin-bottom: 14px; }
+.d-cols ul, .d-cols ol { list-style: none; padding: 0; display: grid; gap: 12px; }
+.d-cols ul li { display: grid; grid-template-columns: 10px 1fr; gap: 12px; align-items: start; }
+.d-cols ul li::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-top: .5em; }
+.d-cols ol { counter-reset: st; gap: 16px; }
+.d-cols ol li { counter-increment: st; display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: start; }
+.d-cols ol li::before { content: counter(st); font-family: var(--font-display); font-weight: 800; font-size: 1.375rem; letter-spacing: -.05em; line-height: 1.05; color: var(--accent); }
+.disclaimer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: .8125rem; max-width: 70ch; }
+
+/* ejercicio: una tarjeta de color por parte del cuerpo */
+.hchips.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.wk { display: flex; justify-content: center; gap: 8px; }
+.wd { position: relative; isolation: isolate; overflow: hidden; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: .8125rem; transition: color 260ms ease; }
+.wd::before { content: ""; position: absolute; inset: 0; z-index: -1; background: currentColor; opacity: .16; transition: background-color 260ms ease, opacity 260ms ease; }
+.wd.on { color: var(--accent); }
+.wd.on::before { background: var(--accent-ink); opacity: 1; }
+.wd.part::before { opacity: .5; }
+.wd.today { outline: 2px solid var(--accent-ink); outline-offset: 2px; }
+.boot .wd { transition-delay: calc(var(--i) * 70ms + 200ms); }
+.xgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+.xt { position: relative; overflow: hidden; isolation: isolate; border-radius: 32px; min-height: 250px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; gap: 16px; background: var(--tc); color: var(--tc-ink); transition: transform 200ms var(--ease-out), opacity 320ms ease, filter 320ms ease; animation: rise 520ms var(--ease-out) backwards; }
+.xt:nth-child(2) { animation-delay: 60ms; } .xt:nth-child(3) { animation-delay: 120ms; } .xt:nth-child(4) { animation-delay: 180ms; } .xt:nth-child(5) { animation-delay: 240ms; } .xt:nth-child(6) { animation-delay: 300ms; }
+.xt:active { transform: scale(.97); }
+@media (hover: hover) and (pointer: fine) { .xt:hover { transform: translateY(-4px); } .xt:hover:active { transform: scale(.97); } .xt:hover .mv { animation-play-state: running; } }
+.xt.on { box-shadow: inset 0 0 0 4px var(--tc-ink); }
+.xt.done { opacity: .78; filter: saturate(.7); }
+.xt-art { display: block; width: 92px; height: 92px; }
+.xt-art svg { display: block; width: 100%; height: 100%; overflow: visible; fill: none; stroke: currentColor; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.xt-art .hd { fill: currentColor; stroke: none; }
+.xt-badge { justify-self: start; display: inline-flex; align-items: center; gap: 6px; border-radius: 99px; padding: 7px 12px; font-size: .8125rem; font-weight: 700; line-height: 1.2; background: var(--tc-ink); color: var(--tc); opacity: 0; transform: scale(.6); transform-origin: left center; transition: opacity 160ms ease, transform 300ms var(--ease-out); }
+.xt.on .xt-badge, .xt.done .xt-badge { opacity: 1; transform: none; }
+.xt-badge svg { width: 15px; height: 15px; stroke-width: 3; }
+.xt-bottom { display: grid; gap: 10px; }
+.xt-name { font-family: var(--font-display); font-weight: 800; font-size: clamp(.95rem, 4.1vw, 1.9rem); letter-spacing: -.05em; line-height: 1.02; overflow-wrap: break-word; }
+.xt-week { display: flex; gap: 6px; }
+.xt-week i { width: 9px; height: 9px; border-radius: 50%; background: currentColor; opacity: .28; transition: opacity 240ms ease, transform 300ms var(--ease-out); }
+.xt-week i.on { opacity: 1; transform: scale(1.25); }
+.mv { animation-duration: 1.2s; animation-timing-function: ease-in-out; animation-iteration-count: infinite; animation-direction: alternate; animation-play-state: paused; }
+.xt.on .mv { animation-play-state: running; }
+.a-bob { animation-name: bob; } .a-lift { animation-name: lift; } .a-jog { animation-name: jog; animation-duration: .5s; }
+.a-curl { animation-name: curl; transform-origin: 48px 54px; } .a-crunch { animation-name: crunch; transform-origin: 58px 80px; } .a-bridge { animation-name: bridge; transform-origin: 26px 78px; }
+@keyframes bob { from { transform: translateY(0); } to { transform: translateY(9px); } }
+@keyframes lift { from { transform: translateY(0); } to { transform: translateY(-9px); } }
+@keyframes jog { from { transform: translateY(0); } to { transform: translateY(-5px); } }
+@keyframes curl { from { transform: rotate(0); } to { transform: rotate(-58deg); } }
+@keyframes crunch { from { transform: rotate(0); } to { transform: rotate(-22deg); } }
+@keyframes bridge { from { transform: rotate(0); } to { transform: rotate(-9deg); } }
+
+/* ejercicio: secciones, detalle de rutina, cardio, consejos y extras */
+.xsec { margin-top: 40px; scroll-margin-top: 84px; }
+.xsec.solo { margin-top: 0; }
+.xt-sub { font-size: .8125rem; font-weight: 500; line-height: 1.25; opacity: .9; margin-top: -4px; }
+.x-sub { color: var(--muted); font-weight: 500; margin-top: 4px; }
+.xlist { list-style: none; padding: 0; counter-reset: xl; display: grid; gap: 0; }
+.xlist li { counter-increment: xl; display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 13px 0; border-top: 1px solid var(--line); }
+.xlist li:first-child { border-top: 0; padding-top: 4px; }
+.xlist li::before { content: counter(xl); font-family: var(--font-display); font-weight: 800; font-size: 1.25rem; letter-spacing: -.05em; color: var(--accent); }
+.xn { display: grid; gap: 2px; min-width: 0; }
+.xn b { font-weight: 700; line-height: 1.25; }
+.xn small { color: var(--muted); font-size: .8125rem; }
+.xset { background: var(--surface-2); border-radius: 99px; padding: 7px 13px; font-weight: 700; font-size: .875rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.xcardio { background: var(--accent-soft); border-radius: 20px; padding: 14px 18px; }
+.xcardio b { color: var(--accent); font-family: var(--font-display); letter-spacing: -.03em; }
+.nivel { justify-self: start; background: var(--accent); color: var(--accent-ink); border-radius: 99px; padding: 5px 13px; font-weight: 700; font-size: .8125rem; }
+.xnote { color: var(--muted); font-size: .9375rem; margin-top: 10px; }
+.xtra-wrap { margin-top: 14px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.xtra { background: var(--surface); border: 1.5px solid var(--line); border-radius: 28px; padding: 20px; display: grid; gap: 6px; align-content: start; }
+.xtra h3 { font-family: var(--font-display); font-weight: 800; font-size: 1.125rem; letter-spacing: -.04em; }
+.xtra p { color: var(--muted); font-size: .875rem; }
+.xtra ul, .chips { list-style: none; padding: 0; margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+.xtra li, .chips li { background: var(--surface-2); border-radius: 99px; padding: 6px 12px; font-size: .875rem; }
+.tips { margin-top: 44px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.tipc { background: var(--surface); border: 1.5px solid var(--line); border-radius: 28px; padding: 20px; }
+.tipc.wide { grid-column: 1 / -1; }
+.tipc h3 { font-family: var(--font-display); font-weight: 800; font-size: 1.125rem; letter-spacing: -.04em; margin-bottom: 14px; }
+.tipc ul:not(.chips) { list-style: none; padding: 0; display: grid; gap: 10px; }
+.tipc ul:not(.chips) li { display: grid; grid-template-columns: 10px 1fr; gap: 12px; align-items: start; }
+.tipc ul:not(.chips) li::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-top: .5em; }
+.tipc .chips { margin-top: 0; }
+@keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+@keyframes row { from { transform: translateX(0); } to { transform: translateX(-10px); } }
+.a-spin { animation-name: spin; animation-timing-function: linear; animation-direction: normal; animation-duration: 1.6s; }
+.a-spin1 { transform-origin: 26px 68px; } .a-spin2 { transform-origin: 74px 68px; }
+.a-row { animation-name: row; }
+
+/* rutina: pantalla propia con el color de la rutina (--accent se reemplaza desde el script) */
+.xt-week i.part { opacity: .6; }
+.rpill { font-size: .8125rem; }
+.rpill.ok { color: var(--accent); }
+.rpill.ok::before { background: var(--accent-ink); opacity: 1; }
+.rhero .hero-date { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "pill pill" "art name" "art sub"; column-gap: 16px; row-gap: 2px; align-items: center; justify-items: start; }
+.rhero .hero-date .pill { grid-area: pill; margin-bottom: 10px; }
+.rhero .hchip b { font-size: 1.0625rem; overflow-wrap: anywhere; line-height: 1.2; }
+.rart { grid-area: art; display: block; width: 92px; height: 92px; }
+.rart svg, .cc-art svg { display: block; width: 100%; height: 100%; overflow: visible; fill: none; stroke: currentColor; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.rart .hd, .cc-art .hd { fill: currentColor; stroke: none; }
+.rhero .mv { animation-play-state: running; }
+.rhero .rname { grid-area: name; align-self: end; font-size: clamp(1.55rem, 7vw, 3.2rem); line-height: 1; overflow-wrap: break-word; }
+.rhero .rsub { grid-area: sub; align-self: start; text-transform: none; letter-spacing: .01em; font-size: .9375rem; font-weight: 500; }
+.rlist { margin-top: 16px; display: grid; gap: 12px; }
+.ex { position: relative; isolation: isolate; overflow: hidden; display: grid; gap: 10px; padding: 12px 14px 14px; border-radius: 28px; background: var(--surface); border: 1.5px solid var(--line); color: var(--ink); transition: border-color 160ms ease, color 220ms ease; }
+.ex::before { content: ""; position: absolute; inset: -1px; z-index: -1; background: var(--accent); clip-path: circle(0% at var(--x, 50%) var(--y, 50%)); transition: clip-path 560ms var(--ease-out); }
+.ex.on::before { clip-path: circle(150% at var(--x, 50%) var(--y, 50%)); }
+.ex.on { color: var(--accent-ink); border-color: var(--accent); }
+.ex-head { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center; min-height: 52px; }
+.ex-n { position: relative; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); transition: background-color 220ms ease, color 220ms ease; }
+.ex.on .ex-n { background: var(--accent-ink); color: var(--accent); }
+.ex-num { font-family: var(--font-display); font-weight: 800; font-size: 1.125rem; letter-spacing: -.05em; transition: opacity 160ms ease, transform 260ms var(--ease-out); }
+.ex-tick { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transform: scale(.4); transition: opacity 160ms ease, transform 300ms var(--ease-out); }
+.ex-tick svg { width: 24px; height: 24px; stroke-width: 3; }
+.ex.on .ex-num { opacity: 0; transform: scale(.4); }
+.ex.on .ex-tick { opacity: 1; transform: none; }
+.ex-txt { display: grid; gap: 2px; min-width: 0; }
+.ex-txt b { font-weight: 700; font-size: 1.0625rem; line-height: 1.25; }
+.ex-txt small { color: var(--muted); font-size: .8125rem; transition: color 220ms ease; }
+.ex.on .ex-txt small, .ex.on .ex-hint { color: inherit; opacity: .92; }
+.ex .xset { transition: background-color 220ms ease, color 220ms ease; }
+.ex.on .xset { background: var(--accent-ink); color: var(--accent); }
+.ex-photo { display: block; width: min(100%, 220px); aspect-ratio: 1; object-fit: cover; border-radius: 22px; margin-left: 56px; background: #FFFFFF; }
+.ex-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px; padding-left: 56px; }
+.ex-sets { display: flex; gap: 8px; }
+.ex-w { display: flex; align-items: center; gap: 8px; }
+.sb { position: relative; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); transition: background-color 220ms ease, color 220ms ease, transform 160ms var(--ease-out); }
+.sb:active { transform: scale(.88); }
+.sb-num { font-family: var(--font-display); font-weight: 800; font-size: 1.0625rem; letter-spacing: -.04em; transition: opacity 160ms ease, transform 260ms var(--ease-out); }
+.sb-tick { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transform: scale(.4); transition: opacity 160ms ease, transform 300ms var(--ease-out); }
+.sb-tick svg { width: 22px; height: 22px; stroke-width: 3; }
+.sb.on { background: var(--accent); color: var(--accent-ink); }
+.sb.on .sb-num { opacity: 0; transform: scale(.4); }
+.sb.on .sb-tick { opacity: 1; transform: none; }
+.ex.on .sb, .ex.on .sb.on { background: var(--accent-ink); color: var(--accent); }
+.stp { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; text-align: center; background: var(--surface-2); font-family: var(--font-display); font-weight: 800; font-size: 1.25rem; line-height: 1; transition: transform 160ms var(--ease-out), background-color 220ms ease, color 220ms ease; }
+.stp:active { transform: scale(.88); }
+.ex.on .stp { background: var(--accent-ink); color: var(--accent); }
+.wf { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 116px; height: 44px; padding: 0 16px; border-radius: 22px; background: var(--surface-2); transition: background-color 220ms ease, color 220ms ease; }
+.wf:focus-within { outline: 3px solid var(--ink); outline-offset: 2px; }
+.wi { width: 5.4ch; border: 0; background: transparent; color: inherit; font-family: var(--font-display); font-weight: 800; font-size: 1.375rem; letter-spacing: -.04em; text-align: right; padding: 0; outline: none; font-variant-numeric: tabular-nums; }
+.wi::placeholder { color: inherit; opacity: .3; }
+.wf span { font-size: .875rem; font-weight: 700; opacity: .75; }
+.ex.on .wf { background: var(--accent-ink); color: var(--accent); }
+.ex-hint { padding-left: 56px; color: var(--muted); font-size: .8125rem; line-height: 1.4; transition: color 220ms ease; }
+.rcard { margin-top: 44px; }
+.cgrid { margin-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.cc { position: relative; isolation: isolate; overflow: hidden; display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; align-items: center; padding: 14px 16px; border-radius: 26px; background: var(--surface); border: 1.5px solid var(--line); color: var(--ink); transition: border-color 160ms ease, color 220ms ease, transform 160ms var(--ease-out); }
+.cc::before { content: ""; position: absolute; inset: -1px; z-index: -1; background: var(--accent); clip-path: circle(0% at var(--x, 50%) var(--y, 50%)); transition: clip-path 540ms var(--ease-out); }
+.cc.on::before { clip-path: circle(150% at var(--x, 50%) var(--y, 50%)); }
+.cc.on { color: var(--accent-ink); border-color: var(--accent); }
+.cc:active { transform: scale(.98); }
+.cc-art { display: block; width: 64px; height: 64px; color: var(--accent); transition: color 220ms ease; }
+.cc.on .cc-art { color: var(--accent-ink); }
+.cc.on .mv { animation-play-state: running; }
+.cc-txt { display: grid; gap: 2px; min-width: 0; padding-right: 30px; }
+.cc-txt b { font-weight: 700; line-height: 1.25; }
+.cc-txt b em { font-style: normal; font-weight: 500; font-size: .875em; opacity: .7; }
+.cc-txt small { color: var(--muted); font-size: .8125rem; line-height: 1.35; transition: color 220ms ease; }
+.cc.on small { color: inherit; opacity: .92; }
+.cc .tick { top: 12px; right: 12px; }
+.cc.on .tick { opacity: 1; transform: none; }
+.fresh .rhero { animation: rise 560ms var(--ease-out) backwards; }
+.fresh .ex { animation: rise 480ms var(--ease-out) backwards; animation-delay: calc(var(--i) * 45ms + 260ms); }
+@media (hover: hover) and (pointer: fine) { .cc:hover:not(.on) { border-color: var(--accent); } .cc:hover .mv { animation-play-state: running; } }
+
+/* resumen de hoy en el inicio de Macarena */
+.dash { margin-top: 14px; display: grid; gap: 12px; }
+.dc { background: var(--surface); border: 1.5px solid var(--line); border-radius: 28px; padding: 18px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.bar { position: relative; height: 10px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.fill { position: absolute; inset: 0; border-radius: inherit; background: var(--accent); transform-origin: left; transform: scaleX(var(--v, 0)); transition: transform 700ms var(--ease-out); }
+.bar .mk { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--ink); opacity: .5; }
+.hstats { display: flex; align-items: flex-start; gap: 14px 32px; flex-wrap: wrap; position: relative; }
+.hs { display: grid; gap: 3px; min-width: 0; }
+.hs small { font-size: .6875rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; opacity: .88; }
+.hs b { font-family: var(--font-display); font-weight: 800; font-size: 1.5rem; letter-spacing: -.05em; line-height: 1.1; }
+.hs b i { font-style: normal; font-family: var(--font-body); font-weight: 500; font-size: .75rem; letter-spacing: 0; opacity: .88; margin-left: 5px; }
+.hbar { position: relative; display: block; width: min(100%, 150px); height: 4px; border-radius: 99px; overflow: hidden; }
+.hbar::before { content: ""; position: absolute; inset: 0; background: currentColor; opacity: .26; }
+.hbar .fill { background: currentColor; }
+.hs .hs-c { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: .75rem; }
+.burn-note { color: var(--muted); font-size: .8125rem; }
+.burn-note b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.dc.prog { gap: 16px; padding: 20px; }
+.dc.prog h2 { font-family: var(--font-display); font-weight: 800; font-size: 1.25rem; letter-spacing: -.045em; }
+.pr { display: grid; gap: 8px; }
+.pr-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.pr-top span { font-weight: 700; }
+.pr-top b { color: var(--muted); font-weight: 500; font-size: .9375rem; font-variant-numeric: tabular-nums; text-align: right; }
+.sin { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; padding-top: 6px; border-top: 1px solid var(--line); }
+.sin label { font-weight: 700; }
+.sbox { display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 18px; border-radius: 24px; background: var(--surface-2); }
+.sbox:focus-within { outline: 3px solid var(--ink); outline-offset: 2px; }
+.sbox input { width: 7ch; border: 0; background: transparent; color: var(--ink); font-family: var(--font-display); font-weight: 800; font-size: 1.375rem; letter-spacing: -.04em; text-align: right; padding: 0; outline: none; font-variant-numeric: tabular-nums; }
+.sbox input::placeholder { color: var(--muted); opacity: .4; }
+.sbox span { color: var(--muted); font-size: .875rem; font-weight: 500; }
+.hnote { display: grid; gap: 12px; padding-top: 14px; }
+.hnote p { color: var(--muted); font-size: .9375rem; }
+.hnote ol { list-style: none; padding: 0; counter-reset: hn; display: grid; gap: 10px; }
+.hnote ol li { counter-increment: hn; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: start; font-size: .9375rem; }
+.hnote ol li::before { content: counter(hn); font-family: var(--font-display); font-weight: 800; font-size: 1.125rem; letter-spacing: -.05em; color: var(--accent); line-height: 1.2; }
+.fresh .dc { animation: rise 520ms var(--ease-out) backwards; animation-delay: 220ms; }
+.fresh .dc.prog { animation-delay: 460ms; }
+
+@media (max-width: 700px) {
+  .hero-grid { grid-template-columns: 1fr; }
+  .hero-date { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "pill pill" "num dow" "num mon"; column-gap: 18px; row-gap: 4px; }
+  .hero-date .pill { grid-area: pill; margin-bottom: 8px; }
+  .dnum { grid-area: num; }
+  .dow { grid-area: dow; align-self: end; overflow-wrap: anywhere; }
+  .mon { grid-area: mon; align-self: start; }
+}
+@media (max-width: 640px) {
+  .tiles { grid-template-columns: 1fr; }
+  .tile { min-height: 210px; }
+  .opts { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 84%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; padding-bottom: 2px; }
+  .opts::-webkit-scrollbar { display: none; }
+  .opt { scroll-snap-align: start; }
+  .xgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .xtra-wrap, .tips { grid-template-columns: 1fr; }
+  .cgrid { grid-template-columns: 1fr; }
+  .ex-ctl, .ex-hint { padding-left: 0; }
+  .ex-photo { margin-left: 0; width: min(100%, 240px); }
+  .ex { padding: 12px 12px 14px; }
+  .xlist li { grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; }
+  .xt { min-height: 220px; padding: 16px; border-radius: 28px; }
+  .xt-art { width: 76px; height: 76px; }
+  .mgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .d-cols { grid-template-columns: 1fr; }
+  .detail { padding: 18px; }
+  .hero, .home-hero { border-radius: 30px; }
+}
+/* movimiento reducido: se quedan los cambios de color y opacidad, se quita el desplazamiento */
+@media (prefers-reduced-motion: reduce) {
+  .pick-title, .pcard, .fresh .home-hero, .fresh .hello-small, .fresh .tile { animation-name: fade; }
+  .fresh .ch { animation: none; }
+  .now::after, .ekg .run { animation: none; }
+  .ekg .run { stroke-dashoffset: 0; stroke-dasharray: none; opacity: .9; }
+  .mbar { animation: none; }
+  .detail-wrap, .detail-clip { transition: none; }
+  .detail-in { transform: none; transition: opacity 160ms ease; }
+  .tick { transform: none; }
+  .opt::before { clip-path: none; opacity: 0; transition: opacity 200ms ease; }
+  .opt.on::before { opacity: 1; }
+  .arc { transition: opacity 160ms ease; stroke-dashoffset: 0; opacity: 0; }
+  .arc.on { opacity: 1; }
+  .pc-mono { transition: none; }
+  .opt-art, .opt.on .opt-art { transform: none; transition: none; }
+  .xt { animation-name: fade; }
+  .fresh .rhero, .fresh .ex, .fresh .dc { animation-name: fade; }
+  .fill { transition: none; }
+  .ex::before, .cc::before { clip-path: none; opacity: 0; transition: opacity 200ms ease; }
+  .ex.on::before, .cc.on::before { opacity: 1; }
+  .ex-num, .ex-tick { transform: none; transition: opacity 160ms ease; }
+  .sb:active, .stp:active, .cc:active { transform: none; }
+  .sb-num, .sb-tick { transform: none; transition: opacity 160ms ease; }
+  .mv { animation: none; }
+  .xt-badge, .xt-week i { transform: none; transition: opacity 160ms ease; }
+  .wd, .wd::before { transition: opacity 160ms ease, color 160ms ease; }
+  .opt:active, .tile:active, .pcard:active, .back:active, .sn:active, button.pill:active { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) and (hover: hover) and (pointer: fine) {
+  .pcard:hover, .tile:hover, .xt:hover { transform: none; } .pcard:hover .pc-mono { transform: none; } .tile:hover .go { transform: none; }
+}
+</style>
+</head>
+<body>
+<div class="shell" id="app"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- perfiles (por ahora solo estos dos) ---------- */
+  var PROFILES = [
+    { id: "angel", name: "Angel Avelar", first: "Angel", last: "Avelar", ini: "AA" },
+    { id: "macarena", name: "Macarena Torres", first: "Macarena", last: "Torres", ini: "MT" }
+  ];
+
+  /* ---------- calendario y tiempos de comida ---------- */
+  var DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+  var MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+
+  // R(nombre, etiqueta, minutos, proteína g, carbohidratos g, grasa g, fibra g, ingredientes, pasos)
+  // Las calorías se calculan: 4 kcal/g proteína y carbohidratos, 9 kcal/g grasa.
+  function R(name, tag, min, p, c, f, fib, ing, steps) {
+    return { name: name, tag: tag, min: min, p: p, c: c, f: f, fib: fib, ing: ing, steps: steps,
+      kcal: Math.round((4 * p + 4 * c + 9 * f) / 5) * 5 };
+  }
+
+  // Catálogo base. Cada perfil recibe su propia copia (PLANS más abajo) para poder
+  // cambiar los platillos de uno sin tocar los del otro.
+
+  /* ---------- ilustraciones de comida (vista desde arriba, dibujadas en SVG) ---------- */
+  function cl(pts, fn) { return pts.map(fn).join(""); }
+  var GL = {
+    fried: function () { return '<path d="M-21 3C-27-12-8-24 6-20 21-16 27-2 18 8 9 18-6 16-14 12-18 10-20 7-21 3z" fill="#fff" stroke="#E2DAC8" stroke-width="1.3"/><circle cx="1" cy="-1" r="9" fill="#FFB400"/><circle cx="-2" cy="-4" r="2.8" fill="#FFE27A"/>'; },
+    scramble: function () { return '<path d="M-22 4C-26-8-14-16-6-13-2-21 10-20 14-12 24-12 27 0 20 7 24 15 8 19 3 14-3 20-14 18-14 11-20 12-22 8-22 4z" fill="#FFD23F"/><path d="M-12-4c4-3 8-2 9 1M4-3c4-2 8 0 8 3M-8 8c4-2 8-1 10 1" stroke="#F0B30A" stroke-width="2" fill="none" stroke-linecap="round"/>'; },
+    tortilla: function () { return '<circle r="20" fill="#F2D8A0" stroke="#DDB66B" stroke-width="1.6"/><g fill="#D7A34E"><circle cx="-7" cy="-6" r="2"/><circle cx="8" cy="3" r="2.4"/><circle cx="-2" cy="10" r="1.8"/><circle cx="10" cy="-10" r="1.6"/><circle cx="-12" cy="6" r="1.5"/></g>'; },
+    taco: function () { return '<path d="M-24 8A24 24 0 0 1 24 8Z" fill="#F2D8A0" stroke="#DDB66B" stroke-width="1.6" stroke-linejoin="round"/><path d="M-17 8A17 17 0 0 1 17 8" fill="none" stroke="#DDB66B" stroke-width="1.1" opacity=".7"/>'; },
+    quesa: function () { return '<path d="M-24 8A24 24 0 0 1 24 8Z" fill="#F2D8A0" stroke="#DDB66B" stroke-width="1.6" stroke-linejoin="round"/><path d="M-21 8H21" stroke="#FFCF3F" stroke-width="5" stroke-linecap="round"/><path d="M-10-6l4 4M2-12l4 4M12-4l4 3" stroke="#D5A04A" stroke-width="2.4" stroke-linecap="round" opacity=".8"/>'; },
+    sinc: function () { return '<path d="M-24 8A24 24 0 0 1 24 8Z" fill="#F2D8A0" stroke="#DDB66B" stroke-width="1.6" stroke-linejoin="round"/><path d="M-21 8H21" stroke="#F4A7A0" stroke-width="5" stroke-linecap="round"/><path d="M-19 3H19" stroke="#FFCF3F" stroke-width="3.5" stroke-linecap="round"/>'; },
+    avo: function () { return '<ellipse rx="15" ry="20" fill="#4F7B34"/><ellipse rx="12" ry="17" fill="#BAD771"/><ellipse cy="3" rx="8" ry="9" fill="#8B5A2B"/><ellipse cx="-3" rx="2.4" ry="4" fill="#B07A45" opacity=".8"/>'; },
+    avoS: function () { return '<path d="M-17 5Q0-17 17 5Q12 11 0 7Q-12 11-17 5Z" fill="#A6CA5E" stroke="#4F7B34" stroke-width="2.4" stroke-linejoin="round"/>'; },
+    avoSpread: function () { return '<rect x="-12" y="-10" width="24" height="20" rx="7" fill="#A7CB62"/><path d="M-6-3q4-3 8 0M-3 4q4-2 8 0" stroke="#86AD42" stroke-width="1.8" fill="none" stroke-linecap="round"/>'; },
+    tomato: function () { return '<circle r="14" fill="#E4442F"/><circle r="10.5" fill="#F58068"/><path d="M0-9V9M-9 0H9" stroke="#E4442F" stroke-width="1.6" opacity=".55"/><circle cx="-4" cy="-4" r="1.4" fill="#FFE2A8"/><circle cx="4" cy="3" r="1.4" fill="#FFE2A8"/>'; },
+    cherry: function () { return '<circle r="7" fill="#E5382B"/><circle cx="-2.4" cy="-2.4" r="1.8" fill="#FF9C8F"/><path d="M0-7q2-3 4-3" stroke="#4F8A1E" stroke-width="1.6" fill="none" stroke-linecap="round"/>'; },
+    beans: function () { return '<path d="M-20 4C-22-8-6-16 8-13 22-10 24 6 14 12 4 18-16 16-20 4z" fill="#6D3F2B"/><g fill="#8F5A3E"><ellipse cx="-6" cy="-3" rx="4" ry="2.4" transform="rotate(-20 -6 -3)"/><ellipse cx="6" cy="2" rx="4" ry="2.4"/><ellipse cx="-2" cy="8" rx="3.6" ry="2.2" transform="rotate(20 -2 8)"/><ellipse cx="11" cy="-4" rx="3" ry="2"/></g>'; },
+    chicken: function () { return '<path d="M-24 2C-22-12 4-18 18-10 28-4 24 10 8 14-8 18-26 14-24 2z" fill="#E1A557"/><path d="M-12-6l10 14M-2-9l10 14M8-8l8 11" stroke="#B3732B" stroke-width="2.6" stroke-linecap="round"/>'; },
+    shred: function () { return '<g stroke="#EBC892" stroke-width="4.2" stroke-linecap="round"><path d="M-14-8l8 3M-1-10l9 2M-16 0l8 2M-3-2l9 4M10-3l6 5M-11 8l8-2M3 9l8-3"/></g><g stroke="#C9985A" stroke-width="1.5" stroke-linecap="round" opacity=".7"><path d="M-12-7l4 1M2-9l4 1M-4-1l4 2"/></g>'; },
+    ground: function () { return '<g fill="#9A5B34">' + cl([[-9,-3],[-2,-7],[6,-3],[-5,3],[3,4],[10,5],[-12,5],[0,-1]], function (p) { return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="3.4"/>'; }) + '</g><g fill="#B9764A">' + cl([[-8,-4],[5,-4],[-4,2]], function (p) { return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="1.4"/>'; }) + '</g>'; },
+    steak: function () { return '<path d="M-24 0C-26-12-6-18 10-14 24-10 28 6 16 13 4 19-22 14-24 0z" fill="#8E4A2C"/><path d="M-14-6l12 16M-4-9l12 16M6-9l10 14" stroke="#5B2C16" stroke-width="2.6" stroke-linecap="round"/><path d="M-22-4C-18-14 0-16 6-15" stroke="#EBCFA5" stroke-width="2" fill="none" stroke-linecap="round"/>'; },
+    fish: function () { return '<path d="M-26 0C-20-10 8-14 24-6 28-2 26 6 22 8 6 14-18 12-26 0z" fill="#F4E6CC" stroke="#DCC59A" stroke-width="1.3"/><path d="M-14-2l6 8M-4-5l6 10M6-5l6 9" stroke="#E4D2AC" stroke-width="2" stroke-linecap="round"/><path d="M-10-4l4 5M2-7l4 6" stroke="#B88A45" stroke-width="2.4" stroke-linecap="round"/>'; },
+    rice: function () { return '<path d="M-22 6C-22-8-8-16 4-14 18-12 24 0 20 8 14 16-18 16-22 6z" fill="#EEDDB5" stroke="#D3BC8A" stroke-width="1.3"/><g stroke="#D3BC8A" stroke-width="1.7" stroke-linecap="round"><path d="M-12-2l3 2M-4-6l3 2M6-5l3 2M-6 3l3 2M4 2l3 2M12 4l3 1M-14 8l3 1"/></g>'; },
+    lettuce: function () { return '<path d="M-22 4C-26-8-12-18-2-14 4-22 18-18 18-8 28-4 24 10 14 12 8 20-6 18-8 12-18 14-24 10-22 4z" fill="#86C45B" stroke="#5E9B3C" stroke-width="1.3"/><path d="M-12 4C-6 0 0-2 8-6M-4 10C0 6 4 4 12 2" stroke="#5E9B3C" stroke-width="1.5" fill="none" stroke-linecap="round"/>'; },
+    lime: function () { return '<path d="M-14 6A14 14 0 0 1 14 6Z" fill="#B7DB4E" stroke="#5F9A22" stroke-width="2.6" stroke-linejoin="round"/><path d="M0 4V-6M-7 5l-5-8M7 5l5-8" stroke="#E8F3A8" stroke-width="1.7" stroke-linecap="round"/>'; },
+    herb: function () { return '<g fill="#4E9A3E"><circle cx="-4" cy="-2" r="2.2"/><circle cx="3" cy="-4" r="1.8"/><circle cx="6" cy="2" r="2.2"/><circle cx="-2" cy="4" r="1.8"/><circle cx="-8" cy="3" r="1.5"/></g>'; },
+    appleS: function () { return '<path d="M-17 5Q0-17 17 5Q12 11 0 7Q-12 11-17 5Z" fill="#FFF0C9" stroke="#E5483A" stroke-width="2.6" stroke-linejoin="round"/>'; },
+    appleC: function () { return '<rect x="-4.5" y="-4.5" width="9" height="9" rx="1.8" fill="#FFF0C9" stroke="#E5483A" stroke-width="1.8"/>'; },
+    banana: function () { return '<path d="M-23 3Q-6 24 21-8 25-14 18-14 8-2-8 6-18 6-23 3z" fill="#FFD84A" stroke="#E0B21F" stroke-width="1.3" stroke-linejoin="round"/><path d="M-22 4l3-1M21-9l1-5" stroke="#7A5A1E" stroke-width="2" stroke-linecap="round"/>'; },
+    bananaS: function () { return '<circle r="7" fill="#FFE585" stroke="#E0B21F" stroke-width="1.3"/><circle r="2.6" fill="#FFF3B8"/>'; },
+    strawberry: function () { return '<path d="M0 15C-13 7-15-3-9-8-4-12-1-9 0-7 1-9 4-12 9-8 15-3 13 7 0 15z" fill="#E63950"/><path d="M-7-9l3-5 3 3 3-3 3 5z" fill="#4E9A3E"/><g fill="#FFD66B"><circle cx="-4" cy="-1" r="1"/><circle cx="3" cy="-2" r="1"/><circle cx="0" cy="4" r="1"/><circle cx="-5" cy="5" r="1"/><circle cx="5" cy="3" r="1"/></g>'; },
+    strawS: function () { return '<path d="M0 15C-13 7-15-3-9-8-4-12-1-9 0-7 1-9 4-12 9-8 15-3 13 7 0 15z" fill="#E63950"/><path d="M0 10C-8 5-9-1-5-4 0-6 0-3 0-3s0-3 5-1C9-1 8 5 0 10z" fill="#FF93A1"/><path d="M-7-9l3-5 3 3 3-3 3 5z" fill="#4E9A3E"/>'; },
+    papaya: function () { return '<rect x="-12" y="-11" width="13" height="13" rx="3" fill="#FF8A3D"/><rect x="3" y="-7" width="13" height="13" rx="3" fill="#FF9E57"/><rect x="-7" y="4" width="13" height="13" rx="3" fill="#FF7A2B"/><g fill="#FFC48F"><rect x="-10" y="-9" width="5" height="3" rx="1.4"/><rect x="5" y="-5" width="5" height="3" rx="1.4"/><rect x="-5" y="6" width="5" height="3" rx="1.4"/></g><g fill="#3B2A22"><ellipse cx="9" cy="2" rx=".9" ry="1.4"/><ellipse cx="-3" cy="-4" rx=".9" ry="1.4"/></g>'; },
+    melon: function () { return '<rect x="-13" y="-11" width="14" height="14" rx="3" fill="#F25C54"/><rect x="3" y="-7" width="14" height="14" rx="3" fill="#F77068"/><rect x="-8" y="4" width="14" height="14" rx="3" fill="#EE4F47"/><g fill="#2B2B2B"><ellipse cx="-7" cy="-5" rx="1" ry="1.7"/><ellipse cx="9" cy="-1" rx="1" ry="1.7"/><ellipse cx="-2" cy="11" rx="1" ry="1.7"/><ellipse cx="-2" cy="-2" rx="1" ry="1.7"/></g>'; },
+    almonds: function () { return '<g fill="#B07A43">' + cl([[-10,-4,-25],[2,-8,20],[9,2,-10],[-4,5,35],[6,10,-30]], function (a) { return '<ellipse cx="' + a[0] + '" cy="' + a[1] + '" rx="6" ry="3.6" transform="rotate(' + a[2] + ' ' + a[0] + ' ' + a[1] + ')"/>'; }) + '</g><g fill="#D9AA72">' + cl([[-11,-5,-25],[1,-9,20],[8,1,-10],[-5,4,35],[5,9,-30]], function (a) { return '<ellipse cx="' + a[0] + '" cy="' + a[1] + '" rx="2.6" ry="1.1" transform="rotate(' + a[2] + ' ' + a[0] + ' ' + a[1] + ')"/>'; }) + '</g>'; },
+    walnut: function () { return '<path d="M-6 0C-6-6 0-8 3-6 7-8 10-2 6 1 8 6 2 8 0 5-4 8-8 4-6 0z" fill="#B58A5A" stroke="#8C6234" stroke-width="1"/><path d="M-2 0C0-3 3-2 4 0" stroke="#8C6234" stroke-width="1" fill="none"/>'; },
+    seeds: function () { return '<g fill="#8DB34F" stroke="#5E8A2E" stroke-width=".9">' + cl([[-10,-6,30],[0,-9,-20],[10,-4,50],[-6,3,-40],[5,5,15],[-12,9,60],[12,11,-25]], function (a) { return '<ellipse cx="' + a[0] + '" cy="' + a[1] + '" rx="5.5" ry="3" transform="rotate(' + a[2] + ' ' + a[0] + ' ' + a[1] + ')"/>'; }) + '</g>'; },
+    yogurt: function () { return '<circle r="22" fill="#FFFFFF" stroke="#E8E2D6" stroke-width="1.3"/><path d="M-12 0C-8-10 6-12 12-4 14 4 4 12-6 10" stroke="#EDE7DB" stroke-width="2.6" fill="none" stroke-linecap="round"/>'; },
+    granola: function () { return '<g fill="#C8913C">' + cl([[-10,-6,20],[2,-9,-30],[9,-2,40],[-4,3,-10],[6,7,25],[-12,7,60],[0,-1,70]], function (a) { return '<rect x="' + (a[0] - 3.4) + '" y="' + (a[1] - 2.2) + '" width="6.8" height="4.4" rx="1.4" transform="rotate(' + a[2] + ' ' + a[0] + ' ' + a[1] + ')"/>'; }) + '</g><g fill="#E7C27A">' + cl([[-8,-2],[6,-5],[2,5]], function (p) { return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="1.8"/>'; }) + '</g>'; },
+    oats: function () { return '<circle r="33" fill="#EBD9B4"/><circle r="33" fill="none" stroke="#D9BE90" stroke-width="1.6"/><g fill="#CDAE78">' + cl([[-14,-10],[-4,-18],[10,-12],[18,-2],[14,12],[2,18],[-12,12],[-20,2],[0,0],[-8,-2],[8,4]], function (p) { return '<ellipse cx="' + p[0] + '" cy="' + p[1] + '" rx="2.6" ry="1.5" transform="rotate(' + (p[0] * 7) + ' ' + p[0] + ' ' + p[1] + ')"/>'; }) + '</g>'; },
+    cinn: function () { return '<rect x="-15" y="-3.4" width="30" height="6.8" rx="3.4" fill="#9A5A32"/><path d="M-12-1h24" stroke="#C48556" stroke-width="1.4" stroke-linecap="round"/>'; },
+    tostada: function () { return '<circle r="19" fill="#EBCB7C" stroke="#D5A94C" stroke-width="1.5"/><g fill="#D5A94C"><circle cx="-6" cy="-5" r="1.3"/><circle cx="7" cy="-2" r="1.3"/><circle cx="-2" cy="8" r="1.3"/><circle cx="-10" cy="4" r="1.1"/><circle cx="10" cy="8" r="1.1"/></g>'; },
+    toast: function () { return '<rect x="-19" y="-17" width="38" height="34" rx="11" fill="#E7B66B" stroke="#C8923F" stroke-width="2"/><rect x="-14" y="-12" width="28" height="24" rx="8" fill="#F6D9A0"/>'; },
+    cheese: function () { return '<g fill="#FFF3C0" stroke="#E5D187" stroke-width="1.3"><rect x="-11" y="-9" width="11" height="11" rx="2.2"/><rect x="2" y="-5" width="11" height="11" rx="2.2"/><rect x="-7" y="4" width="11" height="11" rx="2.2"/></g>'; },
+    panelaS: function () { return '<rect x="-16" y="-9" width="32" height="18" rx="4.5" fill="#FFFDF6" stroke="#E5DFCF" stroke-width="1.5"/><g fill="#EBE5D5">' + cl([[-9,-3],[-3,-3],[3,-3],[9,-3],[-9,3],[-3,3],[3,3],[9,3]], function (p) { return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r=".9"/>'; }) + '</g>'; },
+    carrot: function () { return '<rect x="-20" y="-3.6" width="40" height="7.2" rx="3.6" fill="#F28C28"/><path d="M-16-1h28" stroke="#FFB45C" stroke-width="1.6" stroke-linecap="round"/>'; },
+    celery: function () { return '<rect x="-20" y="-3.8" width="40" height="7.6" rx="3.8" fill="#B5D98F"/><path d="M-16 0h32" stroke="#8DBA61" stroke-width="1.8" stroke-linecap="round"/>'; },
+    cuke: function () { return '<circle r="9.5" fill="#7BB341"/><circle r="7" fill="#DFF0BC"/><g fill="#B7D58D"><circle cx="-2" cy="-2" r="1"/><circle cx="2" cy="1" r="1"/><circle cx="-1" cy="3" r="1"/></g>'; },
+    zuc: function () { return '<circle r="9.5" fill="#4C9A4A"/><circle r="7" fill="#EEF6CF"/><g fill="#CFE3A0"><circle cx="-2" cy="-2" r="1"/><circle cx="2" cy="1" r="1"/><circle cx="-1" cy="3" r="1"/></g>'; },
+    cukeStick: function () { return '<rect x="-18" y="-3.8" width="36" height="7.6" rx="2.2" fill="#B6D98B" stroke="#6FA63A" stroke-width="2"/>'; },
+    jicama: function () { return '<rect x="-18" y="-3.8" width="36" height="7.6" rx="2.2" fill="#F7F0DC" stroke="#E2D5B1" stroke-width="1.3"/>'; },
+    hummusRam: function () { return '<circle r="20" fill="#FFFFFF" stroke="#DCD3C0" stroke-width="2"/><circle r="15" fill="#EBD3A2" stroke="#D9BC80" stroke-width="1.3"/><circle r="8" fill="#E2C37A"/><circle cx="1" cy="-1" r="3" fill="#C8472E"/>'; },
+    pbRam: function () { return '<circle r="20" fill="#FFFFFF" stroke="#DCD3C0" stroke-width="2"/><circle r="15" fill="#C98F4E"/><path d="M-8 2C-4-6 6-6 8 1" stroke="#E0AE6F" stroke-width="2.6" fill="none" stroke-linecap="round"/>'; },
+    popcorn: function () { return '<g fill="#FFF7DC" stroke="#EFD58A" stroke-width="1.3"><circle cx="-9" cy="-4" r="7"/><circle cx="1" cy="-9" r="7"/><circle cx="10" cy="-3" r="7"/><circle cx="-3" cy="4" r="7"/><circle cx="7" cy="8" r="7"/></g><g fill="#F5C842"><circle cx="-9" cy="-4" r="2.4"/><circle cx="8" cy="-4" r="2"/><circle cx="-3" cy="5" r="2"/></g>'; },
+    chickpeas: function () { return '<g fill="#E6BE6E" stroke="#C99A44" stroke-width="1">' + cl([[-12,-6],[-3,-10],[7,-8],[14,-1],[-14,4],[-5,0],[5,2],[-1,10],[10,10]], function (p) { return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="4.8"/>'; }) + '</g>'; },
+    nopal: function () { return '<g fill="#78AB43" stroke="#4F7F2A" stroke-width="1.3"><rect x="-18" y="-10" width="28" height="6.4" rx="3.2" transform="rotate(-10)"/><rect x="-14" y="-1" width="32" height="6.4" rx="3.2" transform="rotate(8)"/><rect x="-10" y="8" width="26" height="6.4" rx="3.2"/></g>'; },
+    salsa: function (c) { return '<circle r="9" fill="' + (c || "#D43A2C") + '"/><circle r="9" fill="none" stroke="rgba(0,0,0,.14)" stroke-width="1"/><circle cx="-2.4" cy="-2.4" r="2" fill="rgba(255,255,255,.4)"/>'; },
+    liquid: function (c) { return '<circle r="38" fill="' + (c || "#E9B25C") + '"/><circle r="38" fill="none" stroke="rgba(0,0,0,.10)" stroke-width="2"/><path d="M-28-16A32 32 0 0 1-8-30" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="3" stroke-linecap="round"/>'; },
+    pasta: function () { return '<g fill="none" stroke="#E5C27A" stroke-width="5.4" stroke-linecap="round"><path d="M-20 4C-16-10 2-12 6-4 10 4-2 10-6 4"/><path d="M-14 13C0 19 16 15 21 4"/><path d="M-6-14C6-18 18-12 21-2"/><path d="M-22-6C-20-14-14-16-10-14"/></g><g fill="none" stroke="#C99F4F" stroke-width="1.4" stroke-linecap="round"><path d="M-15-4C-11-8-3-8-1-4"/><path d="M0 14C8 16 14 13 17 7"/></g>'; },
+    tuna: function () { return '<g fill="#EBB3A3" stroke="#C98270" stroke-width="1.1"><ellipse cx="-8" cy="-2" rx="7.4" ry="4.6" transform="rotate(-20 -8 -2)"/><ellipse cx="3" cy="-6" rx="6.4" ry="4.2"/><ellipse cx="9" cy="3" rx="6.4" ry="4.2" transform="rotate(25 9 3)"/><ellipse cx="-3" cy="5" rx="6.4" ry="4.2"/></g>'; },
+    mandarin: function () { return '<circle r="14" fill="#FF9A1F"/><circle r="14" fill="none" stroke="#E57F08" stroke-width="1.5"/><circle cx="-4" cy="-5" r="3.2" fill="#FFBE5C" opacity=".75"/><path d="M0-14q4-5 9-3-2 5-9 3z" fill="#4E9A3E"/>'; },
+    mandS: function () { return '<path d="M-9 5Q0-12 9 5Q0 1-9 5Z" fill="#FFA726" stroke="#E57F08" stroke-width="1.5" stroke-linejoin="round"/>'; },
+    mushroom: function () { return '<path d="M-10 4C-13-9 13-9 10 4Z" fill="#E7D9C1" stroke="#B49E7C" stroke-width="1.3" stroke-linejoin="round"/><rect x="-3.4" y="3" width="6.8" height="8.5" rx="2.2" fill="#F3E9D6" stroke="#B49E7C" stroke-width="1.3"/>'; },
+    spinach: function () { return '<path d="M0 9C-12 5-12-10 0-15 12-10 12 5 0 9z" fill="#3E9150"/><path d="M0 9V-11" stroke="#2D7040" stroke-width="1.3" stroke-linecap="round"/>'; },
+    omelette: function () { return '<path d="M-27 9A27 21 0 0 1 27 9Z" fill="#FFD54A" stroke="#E5B320" stroke-width="1.6" stroke-linejoin="round"/><path d="M-19 9A19 14 0 0 1 19 9" fill="none" stroke="#F2BB1F" stroke-width="1.5"/><g fill="#3E9150"><circle cx="-9" cy="-1" r="2.2"/><circle cx="4" cy="-7" r="2.2"/><circle cx="12" cy="0" r="2"/></g>'; },
+    hamRoll: function () { return '<circle r="9.5" fill="#F4A7A0" stroke="#D97F78" stroke-width="1.3"/><circle r="5" fill="#FFF3C0" stroke="#E5D187" stroke-width="1"/><path d="M-9.5 0A9.5 9.5 0 0 1 0-9.5" stroke="#D97F78" stroke-width="1.3" fill="none"/>'; },
+    enchilada: function () { return '<rect x="-26" y="-8.5" width="52" height="17" rx="8.5" fill="#F2D8A0" stroke="#DDB66B" stroke-width="1.5"/><rect x="-24" y="-6.5" width="48" height="13" rx="6.5" fill="#7DB045"/><path d="M-14-1h8M2 3h10M-4 1h2" stroke="#FFFDF0" stroke-width="2.4" stroke-linecap="round"/>'; },
+    chipTri: function () { return '<path d="M-8 6L0-9 8 6Z" fill="#EBC567" stroke="#D1A442" stroke-width="1.3" stroke-linejoin="round"/>'; },
+    crumbles: function (c) { return '<g fill="' + (c || "#FFFDF4") + '" stroke="#E6DFCB" stroke-width=".9">' + cl([[-5,0,2.6],[2,-3,2.2],[6,3,2.6],[-1,4,2]], function (p) { return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + p[2] + '"/>'; }) + '</g>'; },
+    onionRing: function () { return '<circle r="6" fill="none" stroke="#E4CDEB" stroke-width="2.3"/>'; },
+    cream: function () { return '<path d="M-14 0q4-6 8 0t8 0 8 0 6 0" fill="none" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round"/>'; },
+    swirl: function () { return '<path d="M-18 0C-18-12 2-16 10-8 16 0 8 10-2 8-8 6-8 0-2-2" fill="none" stroke="#FFFDF2" stroke-width="3.4" stroke-linecap="round"/>'; },
+    chia: function () { return '<g fill="#2B2B2B">' + cl([[-8,-4],[-2,-8],[6,-5],[10,1],[3,4],[-5,5],[0,-1]], function (p) { return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="1.1"/>'; }) + '</g>'; },
+    sprinkle: function (c) { return '<g fill="' + (c || "#9A5A32") + '">' + cl([[-14,-6],[-8,-12],[0,-8],[8,-13],[14,-4],[-10,2],[-2,0],[6,2],[12,8],[-6,10],[2,12],[-14,10]], function (p) { return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="1.5"/>'; }) + '</g>'; },
+    cabbage: function () { return '<g fill="none" stroke="#8E3D8C" stroke-width="3" stroke-linecap="round"><path d="M-12 2q4-7 8 0M0-3q4-7 8 0M-6 8q4-7 8 0M8 6q3-5 6 0"/></g>'; },
+    pico: function () { return '<rect x="-9" y="-4" width="5.4" height="5.4" rx="1.2" fill="#E5382B"/><rect x="-1" y="-7" width="5.4" height="5.4" rx="1.2" fill="#FFF4DA"/><rect x="5" y="-1" width="5.4" height="5.4" rx="1.2" fill="#E5382B"/><rect x="-5" y="3" width="5.4" height="5.4" rx="1.2" fill="#6BA43A"/><rect x="3" y="5" width="4.4" height="4.4" rx="1.2" fill="#FFF4DA"/>'; },
+    bitsR: function () { return '<g fill="#E5382B">' + cl([[-8,-3],[-2,-7],[6,-4],[-5,3],[4,4],[10,0]], function (p) { return '<rect x="' + (p[0] - 2) + '" y="' + (p[1] - 2) + '" width="4" height="4" rx="1"/>'; }) + '</g><g fill="#4E9A3E">' + cl([[-4,0],[3,-2],[0,6]], function (p) { return '<rect x="' + (p[0] - 1.6) + '" y="' + (p[1] - 1.6) + '" width="3.2" height="3.2" rx=".8"/>'; }) + '</g>'; },
+    carrotR: function () { return '<circle r="6.4" fill="#F28C28"/><circle r="3.4" fill="#FFB45C"/>'; },
+    radish: function () { return '<circle r="7" fill="#E64A6B"/><circle r="4.6" fill="#FFE9EE"/>'; },
+    cracker: function () { return '<rect x="-9.5" y="-9.5" width="19" height="19" rx="3.2" fill="#D8A860" stroke="#B9843A" stroke-width="1.3"/><g fill="#B9843A"><circle cx="-3.4" cy="-3.4" r="1"/><circle cx="3.4" cy="-3.4" r="1"/><circle cx="-3.4" cy="3.4" r="1"/><circle cx="3.4" cy="3.4" r="1"/></g>'; },
+    curd: function () { return '<path d="M-13 4C-14-8 14-8 13 4 13 9-13 9-13 4z" fill="#FFFDF4" stroke="#E6DFCB" stroke-width="1.3"/><g fill="#EFE9D8"><circle cx="-5" cy="0" r="1.8"/><circle cx="2" cy="-2" r="1.8"/><circle cx="6" cy="2" r="1.6"/></g>'; },
+    potato: function () { return '<g fill="#EBCB7A" stroke="#D2A94B" stroke-width="1.3"><rect x="-13" y="-10" width="12" height="12" rx="3"/><rect x="2" y="-7" width="12" height="12" rx="3"/><rect x="-8" y="4" width="12" height="12" rx="3"/><rect x="7" y="8" width="10" height="10" rx="3"/></g><g fill="#F7E3A6"><rect x="-11" y="-8" width="5" height="3" rx="1.4"/><rect x="4" y="-5" width="5" height="3" rx="1.4"/><rect x="-6" y="6" width="5" height="3" rx="1.4"/></g>'; },
+    guac: function () { return '<circle r="13" fill="#8DBA3E" stroke="#5E8A2A" stroke-width="1.3"/><g fill="#B7D86B"><circle cx="-4" cy="-3" r="2.4"/><circle cx="4" cy="2" r="2.2"/><circle cx="-2" cy="6" r="1.8"/></g><g fill="#E5382B"><rect x="1" y="-7" width="3.4" height="3.4" rx=".8"/><rect x="-8" y="2" width="3.2" height="3.2" rx=".8"/></g>'; },
+    apple: function () { return '<circle r="13" fill="#E5483A"/><circle cx="-4" cy="-4" r="3.6" fill="#FF8C7E" opacity=".7"/><path d="M0-12q1-5 5-6" stroke="#6B4A2A" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M2-13q6-4 9 0-5 4-9 0z" fill="#4E9A3E"/>'; },
+    berries: function () { return '<g fill="#3D4FA8" stroke="#2A3880" stroke-width="1">' + cl([[-9,-4],[0,-8],[9,-3],[-4,3],[6,6],[-11,7],[1,-1]], function (p) { return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="4.4"/>'; }) + '</g><g fill="#8FA0E8">' + cl([[-10,-5],[-1,-9],[8,-4],[-5,2],[5,5],[-12,6],[0,-2]], function (p) { return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="1.2"/>'; }) + '</g>'; },
+    cottage: function () { return '<path d="M-20 6C-22-8-8-14 0-12 10-14 22-6 20 6 18 14-18 14-20 6z" fill="#FFFEF8" stroke="#E6DFCB" stroke-width="1.3"/><g fill="#F3EEDD" stroke="#E6DFCB" stroke-width=".8">' + cl([[-11,-2],[-3,-6],[6,-4],[13,2],[-6,3],[3,2],[-12,8],[8,9]], function (p) { return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="3.4"/>'; }) + '</g>'; },
+    pineapple: function () { return '<g fill="#FFD84A" stroke="#E5B820" stroke-width="1.2"><rect x="-13" y="-11" width="13" height="13" rx="2.5"/><rect x="3" y="-7" width="13" height="13" rx="2.5"/><rect x="-8" y="5" width="13" height="13" rx="2.5"/></g><g fill="#FFEFA0"><rect x="-11" y="-9" width="5" height="3" rx="1.4"/><rect x="5" y="-5" width="5" height="3" rx="1.4"/><rect x="-6" y="7" width="5" height="3" rx="1.4"/></g>'; },
+    ramYog: function () { return '<circle r="20" fill="#FFFFFF" stroke="#DCD3C0" stroke-width="2"/><circle r="15" fill="#FFFDF7"/><path d="M-8 2C-4-6 6-6 8 1" stroke="#EDE7DB" stroke-width="2.6" fill="none" stroke-linecap="round"/>'; },
+    ricecake: function () { return '<circle r="15" fill="#F4E8CC" stroke="#DCC89A" stroke-width="1.5"/><g fill="#E3D2A8"><circle cx="-5" cy="-4" r="1.4"/><circle cx="4" cy="-6" r="1.4"/><circle cx="6" cy="3" r="1.4"/><circle cx="-3" cy="6" r="1.4"/><circle cx="0" cy="0" r="1.2"/><circle cx="-8" cy="2" r="1.2"/></g>'; },
+    tunaCube: function () { return '<rect x="-9" y="-9" width="18" height="18" rx="4" fill="#4A2326"/><rect x="-6" y="-6" width="12" height="12" rx="2.5" fill="#D8586B"/><rect x="-4" y="-4" width="5" height="4" rx="1.5" fill="#EE8A98" opacity=".8"/>'; },
+    salmon: function () { return '<path d="M-26 0C-22-10 8-15 24-8 28-4 26 6 22 9 6 15-18 13-26 0z" fill="#F29A6B" stroke="#D97A47" stroke-width="1.3"/><path d="M-16-3l7 9M-6-6l7 11M5-6l7 10M14-4l5 8" stroke="#FBD0B3" stroke-width="2.2" stroke-linecap="round"/>'; },
+    pure: function () { return '<path d="M-20 8C-22-6-8-16 2-14 14-14 22-4 20 8 18 14-18 14-20 8z" fill="#F7E7A8" stroke="#E2CB80" stroke-width="1.3"/><path d="M-10-2C-6-8 4-8 8-2M-12 6C-4 10 8 10 14 4" stroke="#EAD58E" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="0" cy="-3" r="2" fill="#F2C94C"/>'; },
+    peanuts: function () { return '<g fill="#D9A864" stroke="#B88540" stroke-width="1">' + cl([[-10,-4,-25],[2,-8,20],[10,0,-10],[-4,5,35],[6,9,-30],[-12,8,15]], function (a) { return '<ellipse cx="' + a[0] + '" cy="' + a[1] + '" rx="5.4" ry="3.4" transform="rotate(' + a[2] + ' ' + a[0] + ' ' + a[1] + ')"/>'; }) + '</g>'; },
+    wedge: function () { return ''; }
+  };
+
+  function item(it) {
+    var f = GL[it[0]];
+    if (!f) return "";
+    return '<g transform="translate(' + it[1] + ' ' + it[2] + ') rotate(' + (it[4] || 0) + ') scale(' + (it[3] || 1) + ')">' + f(it[5]) + '</g>';
+  }
+
+  function vessel(spec) {
+    var v = spec.v || "plate";
+    if (v === "bowl") {
+      return '<ellipse cx="103" cy="76" rx="54" ry="52" fill="rgba(0,0,0,.12)"/><circle cx="100" cy="70" r="51" fill="' + (spec.vc || "#F1EBDD") + '"/><circle cx="100" cy="70" r="51" fill="none" stroke="rgba(0,0,0,.10)" stroke-width="1.5"/><circle cx="100" cy="70" r="41" fill="' + (spec.vi || "#E3DAC6") + '"/><path d="M62 50A42 42 0 0 1 88 32" stroke="rgba(255,255,255,.6)" stroke-width="3.2" stroke-linecap="round" fill="none"/>';
+    }
+    if (v === "glass") {
+      return '<ellipse cx="100" cy="124" rx="34" ry="6" fill="rgba(0,0,0,.14)"/><path d="M70 22H130L122 116Q100 124 78 116Z" fill="rgba(255,255,255,.6)" stroke="#CFD9E6" stroke-width="2" stroke-linejoin="round"/><path d="M73 44H127L121 114Q100 121 79 114Z" fill="' + (spec.liq || "#FFE8A8") + '"/><path d="M73 44Q86 38 100 44T127 44" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="3"/><path d="M77 52L82 108" stroke="rgba(255,255,255,.8)" stroke-width="3" stroke-linecap="round"/><path d="M114 10L104 72" stroke="#E5382B" stroke-width="4.4" stroke-linecap="round"/><path d="M111.5 26L107.5 50" stroke="#fff" stroke-width="4.4" stroke-linecap="round"/>';
+    }
+    return '<ellipse cx="103" cy="76" rx="54" ry="52" fill="rgba(0,0,0,.10)"/><circle cx="100" cy="70" r="52" fill="#FFFFFF" stroke="#E4DDCC" stroke-width="1.5"/><circle cx="100" cy="70" r="41" fill="#FAF8F2" stroke="#EEE8DB" stroke-width="1.2"/>';
+  }
+
+  var ART_FALLBACK = { bg: "#EEEAE0", v: "plate", it: [["tortilla", 100, 70, 1.2, 0]] };
+  function foodArt(spec) {
+    var s = spec || ART_FALLBACK;
+    if (s.img) return '<img class="art" src="' + s.img + '" alt="" decoding="async"' + (s.pos ? ' style="object-position:' + s.pos + '"' : '') + '>';
+    return '<svg class="art" viewBox="14 6 172 120.4" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' + vessel(s) + (s.it || []).map(item).join("") + '</svg>';
+  }
+
+  /* ---------- fotos de comida (JPEG incrustado: el visor no carga imágenes externas) ---------- */
+  var PHOTOS = {
+    yogurtFrutos: "fotos/yogurtFrutos.jpg",
+    yogurtAvena: "fotos/yogurtAvena.jpg",
+    tacos: "fotos/tacos.jpg",
+    cottage: "fotos/cottage.jpg",
+    polloPapa: "fotos/polloPapa.jpg",
+    polloArroz: "fotos/polloArroz.jpg",
+    pescadoPapa: "fotos/pescadoPapa.jpg",
+    tostadaAguacate: "fotos/tostadaAguacate.jpg",
+    huevosTortillas: "fotos/huevosTortillas.jpg",
+    yogurtFruta: "fotos/yogurtFruta.jpg",
+    tostadasAtun: "fotos/tostadasAtun.jpg",
+    guacPollo: "fotos/guacPollo.jpg",
+    atunCubos: "fotos/atunCubos.jpg",
+    atunLata: "fotos/atunLata.jpg",
+    tacosAtun: "fotos/tacosAtun.jpg",
+    salmonArroz: "fotos/salmonArroz.jpg",
+    pescadoPure: "fotos/pescadoPure.jpg",
+    ensaladaPollo: "fotos/ensaladaPollo.jpg"
+  };
+  // fotos de ejercicios por clave: aparecen en todas las rutinas donde el ejercicio se repite (r = proporción, w = ancho máximo en px)
+  var EXPHOTOS = {
+    "zancada-bulgara": { src: "fotos/ej-zancada-bulgara.jpg", alt: "Zancada con mancuerna" },
+    "remo-sentado": { src: "fotos/ej-remo-sentado.jpg", alt: "Máquina de remo sentado" },
+    "press-pecho": { src: "fotos/ej-press-pecho.jpg", alt: "Máquina de press de pecho" },
+    "prensa": { src: "fotos/ej-prensa.jpg", alt: "Máquina de prensa de piernas" },
+    "core": { src: "fotos/ej-core.jpg", alt: "Plancha", r: 2.410, w: 340 },
+    "peso-muerto-rumano": { src: "fotos/ej-peso-muerto-rumano.jpg", alt: "Peso muerto rumano con mancuernas" },
+    "patada-gluteo": { src: "fotos/ej-patada-gluteo.jpg", alt: "Máquina de patada de glúteo" },
+    "pantorrilla": { src: "fotos/ej-pantorrilla.jpg", alt: "Máquina de pantorrilla de pie" },
+    "jalon-pecho": { src: "fotos/ej-jalon-pecho.jpg", alt: "Máquina de jalón al pecho" },
+    "hip-thrust": { src: "fotos/ej-hip-thrust.jpg", alt: "Máquina de hip thrust" },
+    "extension-pierna": { src: "fotos/ej-extension-pierna.jpg", alt: "Máquina de extensión de pierna" },
+    "femoral-sentado": { src: "fotos/ej-femoral-sentado.jpg", alt: "Máquina de femoral sentado" },
+    "abductores": { src: "fotos/ej-abductores.jpg", alt: "Máquina de abductores" },
+    "aductores": { src: "fotos/ej-aductores.jpg", alt: "Máquina de aductores" },
+    "posterior-hombro": { src: "fotos/ej-posterior-hombro.jpg", alt: "Máquina de posterior de hombro (pec deck)" },
+    "triceps-polea": { src: "fotos/ej-triceps-polea.jpg", alt: "Extensión de tríceps en polea" },
+    "elevacion-lateral": { src: "fotos/ej-elevacion-lateral.jpg", alt: "Elevación lateral con mancuernas" },
+    "curl-biceps": { src: "fotos/ej-curl-biceps.jpg", alt: "Curl de bíceps con mancuernas" },
+    "press-inclinado": { src: "fotos/ej-press-inclinado.jpg", alt: "Press inclinado con mancuernas" },
+    "predicador": { src: "fotos/ej-predicador.jpg", alt: "Curl predicador con barra Z" },
+    "pec-fly": { src: "fotos/ej-pec-fly.jpg", alt: "Máquina de pec fly" },
+    "militar": { src: "fotos/ej-militar.jpg", alt: "Press militar con mancuernas" },
+    "frances": { src: "fotos/ej-frances.jpg", alt: "Extensión de tríceps acostado con mancuerna (francés)" },
+    "copa-barra": { src: "fotos/ej-copa-barra.jpg", alt: "Extensión de tríceps con barra sobre la cabeza (copa)" }
+  };
+
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  var DAYS_S = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+  var MONTHS_S = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  // rutinas de Angel: cada una es una opción para elegir; [ejercicio, series, nota, clave, paso del peso en kg]
+  var ANGEL_BODY = [
+    { id: "pea", name: "Pecho y espalda A", full: "Pecho y espalda A", sub: "Inclinado, plano unilateral, remo y jalón abierto", c: "#3B5BDB", ink: "#FFFFFF", picto: "banca", cardio: "35 min", ex: [
+      ["Press inclinado", "3 series", "", "press-inclinado"], ["Press plano", "2 series", "En la máquina unilateral", "press-plano", 0, "press-pecho"], ["Pec fly", "2 series", "", "pec-fly"], ["Remo horizontal", "4 series", "", "remo-horizontal", 0, "remo-sentado"], ["Jalón al pecho abierto", "4 series", "", "jalon-abierto", 0, "jalon-pecho"]] },
+    { id: "peb", name: "Pecho y espalda B", full: "Pecho y espalda B", sub: "Press inclinado y plano, jalón triángulo y remo abierto", c: "#1971C2", ink: "#FFFFFF", picto: "remo", cardio: "35 min", ex: [
+      ["Press inclinado", "2 series", "", "press-inclinado"], ["Press plano", "2 series", "", "press-plano", 0, "press-pecho"], ["Pec fly", "2 series", "", "pec-fly"], ["Jalón al pecho triángulo", "4 series", "", "jalon-triangulo", 0, "jalon-pecho"], ["Remo horizontal abierto", "4 series", "", "remo-horizontal-abierto", 0, "remo-sentado"]] },
+    { id: "bha", name: "Brazo y hombro A", full: "Tríceps, bíceps y hombro A", sub: "Inicia con hombro", c: "#E8590C", ink: "#12142A", picto: "brazo", cardio: "35 min", ex: [
+      ["Militar", "2 series", "Inicia con hombro", "militar"], ["Posterior", "2 series", "", "posterior", 0, "posterior-hombro"], ["Laterales", "4 series", "", "laterales", 0, "elevacion-lateral"], ["Extensiones de tríceps", "2 series", "Con el triángulo", "triceps-triangulo", 0, "triceps-polea"], ["Francés", "2 series", "", "frances", 1], ["Copa con barra", "2 series", "", "copa-barra"], ["Curl", "3 series", "", "curl", 0, "curl-biceps"], ["Predicador", "3 series", "", "predicador"]] },
+    { id: "bhb", name: "Brazo y hombro B", full: "Bíceps, tríceps y hombro B", sub: "Máquinas y poleas", c: "#F08C00", ink: "#12142A", picto: "alta", cardio: "35 min", ex: [
+      ["Extensiones de tríceps", "2 series", "Con triángulo", "triceps-triangulo", 0, "triceps-polea"], ["Francés", "2 series", "Con mancuernas", "frances", 1], ["Copa con barra", "2 series", "Con la barra chiquita", "copa-barra"], ["Curl en polea", "3 series", "Con las dos poleas abajo, inclinándote hacia adelante", "curl-polea", 0, "curl-biceps"], ["Predicador", "3 series", "En la máquina", "predicador"], ["Militar", "2 series", "Máquina", "militar"], ["Posterior", "3 series", "Polea baja", "posterior", 0, "posterior-hombro"], ["Laterales", "4 series", "Con grillete en polea", "laterales", 0, "elevacion-lateral"]] },
+    { id: "pie", name: "Pierna completa", full: "Pierna completa", sub: "Búlgaras en Smith, prensa y pantorrilla", c: "#0CA678", ink: "#12142A", picto: "pierna", cardio: "25 min", ex: [
+      ["Búlgaras", "2 series", "En Smith", "bulgara-smith", 0, "zancada-bulgara"], ["Extensión de pierna", "3 series", "", "extension-pierna"], ["Prensa", "3 series", "", "prensa"], ["Femoral sentado", "3 series", "En la máquina", "femoral-sentado"], ["Peso muerto", "2 series", "Con mancuernas", "peso-muerto", 1, "peso-muerto-rumano"], ["Pantorrilla parado", "4 series", "", "pantorrilla-parado", 0, "pantorrilla"]] }
+  ];
+  // cada perfil tiene su propia copia de comidas y de partes del cuerpo
+
+  /* ---------- plan de Macarena (porciones del plan; calorías y macros estimados con tablas estándar) ---------- */
+  function M(name, tag, min, p, c, f, fib, ing, steps, art) {
+    var m = R(name, tag, min, p, c, f, fib, ing, steps);
+    m.art = art;
+    return m;
+  }
+  var MAC_SLOTS = [
+    { k: "des", name: "Desayuno", sn: "Des", sub: "", at: "8:00 – 9:00 am", m: 480 },
+    { k: "com", name: "Comida", sn: "Com", sub: "", at: "1:00 – 2:00 pm", m: 780 },
+    { k: "col", name: "Colación", sn: "Col", sub: "", at: "4:00 – 5:00 pm", m: 960 },
+    { k: "cen", name: "Cena", sn: "Cena", sub: "Temprano para evitar pesadez en el gym", at: "5:00 – 6:00 pm", m: 1020 }
+  ];
+  var MAC_MEALS = {
+    des: [
+      M("Huevos con claras y tortillas", "Alto en proteína", 10, 27, 45, 12, 7,
+        ["2 huevos + 100 g de claras", "2 tortillas de maíz", "1 fruta"],
+        ["Bate los huevos con las claras.", "Cocínalos en sartén antiadherente, sin aceite, hasta que cuajen.", "Sirve con las tortillas calientes y la fruta."],
+        { bg: "#FFE9C7", v: "plate", it: [["scramble", 82, 64, 1.2, -8], ["bitsR", 80, 60, 1.1, 0], ["tortilla", 118, 46, .8, 0], ["tortilla", 126, 53, .8, 0], ["mandarin", 116, 92, .95, 0], ["mandS", 138, 86, .9, 60]] }),
+      M("Yogurt griego con avena, fresas y nueces", "Con fibra", 5, 27, 48, 13, 8,
+        ["200 g de yogurt griego natural", "40 g de avena", "Fresas o frutos rojos", "10 g de nueces"],
+        ["Pon el yogurt en un tazón.", "Agrega la avena, las fresas y las nueces.", "Mezcla y come de inmediato."],
+        { bg: "#FFE3EC", v: "bowl", vc: "#FFFFFF", vi: "#F3EDE6", it: [["yogurt", 100, 70, 1.6, 0], ["granola", 90, 62, 1.2, 0], ["strawS", 112, 60, .9, 15], ["strawS", 102, 84, .9, 0], ["walnut", 80, 78, 1.3, 20], ["walnut", 122, 82, 1.3, -30]] }),
+      M("Huevos con pan integral y aguacate", "Con aguacate", 12, 21, 44, 16, 9,
+        ["2 huevos", "2 rebanadas de pan integral", "30 g de aguacate", "1 fruta"],
+        ["Cocina los huevos estrellados en sartén antiadherente.", "Tuesta el pan y unta el aguacate machacado.", "Sirve con los huevos y la fruta."],
+        { bg: "#E9F3C4", v: "plate", it: [["toast", 74, 58, .85, -8], ["toast", 76, 86, .85, 6], ["fried", 120, 58, .72, 0], ["fried", 122, 88, .72, 0], ["avoS", 100, 72, .75, 90], ["appleS", 100, 104, .8, 0]] })
+    ],
+    com: [
+      M("Pollo con arroz y aguacate", "Alto en proteína", 25, 47, 47, 13, 7,
+        ["130 g de pollo cocido", "130 g de arroz blanco", "50 g de aguacate", "Verduras"],
+        ["Cocina el pollo a la plancha con sal, limón y pimienta.", "Cuece el arroz y prepara las verduras al vapor o salteadas.", "Sirve todo junto y agrega el aguacate."],
+        { bg: "#E6F2D0", v: "plate", it: [["chicken", 78, 76, 1.05, -8], ["rice", 122, 80, 1, 0], ["lettuce", 98, 44, 1, 0], ["tomato", 82, 44, .55, 0], ["cuke", 114, 42, .85, 0], ["avoS", 128, 56, .85, 20]] }),
+      M("Pollo con papa y guacamole", "Con papa", 30, 47, 53, 12, 9,
+        ["130 g de pollo cocido", "220 g de papa cocida", "50 g de guacamole", "Ensalada"],
+        ["Cocina el pollo a la plancha con sal y pimienta.", "Cuece la papa y córtala en cubos.", "Sirve con el guacamole y la ensalada."],
+        { bg: "#FFF0CF", v: "plate", it: [["chicken", 76, 72, 1, -8], ["potato", 122, 74, .95, 0], ["lettuce", 100, 44, .9, 0], ["tomato", 80, 46, .5, 0], ["guac", 104, 100, .9, 0]] }),
+      M("Tacos de pollo o carne magra", "Tacos", 25, 48, 52, 14, 11,
+        ["130 g de pollo o carne magra", "3 tortillas de maíz", "40 g de aguacate", "Pico de gallo y verduras"],
+        ["Cocina el pollo o la carne magra y córtalo en tiras.", "Calienta las tortillas y arma los tacos.", "Termina con aguacate, pico de gallo y verduras."],
+        { bg: "#FDE7D3", v: "plate", it: [["taco", 76, 82, .78, -12], ["taco", 100, 76, .78, 0], ["taco", 124, 82, .78, 12], ["shred", 76, 64, .5, -12], ["shred", 100, 58, .5, 0], ["shred", 124, 64, .5, 12], ["pico", 78, 70, .55, 0], ["pico", 124, 70, .55, 0], ["avoS", 100, 64, .5, 0], ["lime", 100, 102, .9, 0]] })
+    ],
+    col: [
+      M("Yogurt griego con frutos rojos", "Alto en proteína", 2, 19, 19, 3, 3,
+        ["170–200 g de yogurt griego", "Fresas o frutos rojos"],
+        ["Pon el yogurt en un tazón.", "Agrega las fresas o los frutos rojos."],
+        { bg: "#E4E9FF", v: "bowl", vc: "#FFFFFF", vi: "#F3EDE6", it: [["yogurt", 100, 70, 1.6, 0], ["berries", 90, 62, 1.2, 0], ["strawS", 114, 62, .85, 15], ["berries", 106, 84, 1.1, 0]] }),
+      M("Fruta con almendras y yogurt", "Con almendras", 3, 16, 25, 10, 5,
+        ["1 fruta", "15 g de almendras", "100–150 g de yogurt griego"],
+        ["Lava la fruta.", "Sirve con las almendras y el yogurt."],
+        { bg: "#FFE0E0", v: "plate", it: [["apple", 76, 66, 1.5, 0], ["almonds", 76, 102, .8, 0], ["ramYog", 122, 74, 1.2, 0]] }),
+      M("Queso cottage con fruta", "Ligero", 3, 17, 22, 7, 3,
+        ["150 g de queso cottage", "1 fruta (piña, fresa o manzana)"],
+        ["Sirve el queso cottage en un tazón.", "Agrega la fruta picada."],
+        { bg: "#FFF3C4", v: "bowl", vc: "#7FA2E0", vi: "#6E92D2", it: [["cottage", 100, 70, 1.7, 0], ["pineapple", 92, 60, .95, 0], ["strawS", 118, 82, .9, 10]] })
+    ],
+    cen: [
+      M("Atún con tostadas y aguacate", "Rápido", 10, 33, 40, 11, 9,
+        ["1 lata de atún en agua", "3 tostadas horneadas", "50 g de aguacate", "Verduras"],
+        ["Escurre el atún y sazónalo con limón y pimienta.", "Reparte sobre las tostadas horneadas.", "Termina con aguacate y acompaña con verduras."],
+        { bg: "#D9EEF5", v: "plate", it: [["tostada", 78, 74, 1, 0], ["tuna", 78, 74, .5, 0], ["tostada", 122, 74, 1, 0], ["tuna", 122, 74, .5, 0], ["tostada", 100, 48, 1, 0], ["tuna", 100, 48, .5, 0], ["avoS", 100, 92, .7, 0], ["cherry", 126, 100, 1, 0], ["cherry", 72, 100, 1, 0]] }),
+      M("Pescado blanco con papa y aguacate", "Pescado", 25, 42, 42, 10, 9,
+        ["140 g de pescado blanco", "150–180 g de papa", "40 g de aguacate", "Verduras"],
+        ["Cocina el pescado a la plancha con limón, sal y pimienta.", "Cuece la papa y sírvela al lado.", "Acompaña con aguacate y verduras."],
+        { bg: "#E2F0FF", v: "plate", it: [["fish", 76, 72, 1.05, -8], ["potato", 122, 76, .9, 0], ["avoS", 100, 102, .8, 0], ["lettuce", 96, 44, .85, 0], ["zuc", 124, 48, .7, 0]] }),
+      M("Pollo con arroz y verduras", "Pollo", 25, 42, 37, 11, 6,
+        ["120 g de pollo", "100 g de arroz", "40 g de aguacate", "Verduras"],
+        ["Cocina el pollo a la plancha con sal y pimienta.", "Sirve con el arroz.", "Acompaña con aguacate y verduras."],
+        { bg: "#FFF0CE", v: "plate", it: [["chicken", 76, 74, 1, -8], ["rice", 122, 78, .95, 0], ["avoS", 100, 102, .8, 0], ["lettuce", 98, 44, .9, 0], ["cherry", 126, 54, 1, 0]] })
+    ]
+  };
+  // fotos reales de los platillos (pos = qué parte de la foto queda al recortarla)
+  MAC_MEALS.des[0].art = { bg: "#F3F2EE", img: PHOTOS.huevosTortillas, pos: "50% 78%" };
+  MAC_MEALS.des[1].art = { bg: "#F3F2EE", img: PHOTOS.yogurtAvena };
+  MAC_MEALS.des[2].art = { bg: "#F3F2EE", img: PHOTOS.tostadaAguacate, pos: "50% 65%" };
+  MAC_MEALS.com[0].art = { bg: "#F3F2EE", img: PHOTOS.polloArroz };
+  MAC_MEALS.com[1].art = { bg: "#F3F2EE", img: PHOTOS.polloPapa };
+  MAC_MEALS.com[2].art = { bg: "#F3F2EE", img: PHOTOS.tacos };
+  MAC_MEALS.col[0].art = { bg: "#F3F2EE", img: PHOTOS.yogurtFrutos };
+  MAC_MEALS.col[1].art = { bg: "#F3F2EE", img: PHOTOS.yogurtFruta };
+  MAC_MEALS.col[2].art = { bg: "#F3F2EE", img: PHOTOS.cottage };
+  MAC_MEALS.cen[0].art = { bg: "#F3F2EE", img: PHOTOS.tostadasAtun };
+  MAC_MEALS.cen[1].art = { bg: "#F3F2EE", img: PHOTOS.pescadoPapa };
+  MAC_MEALS.cen[2].art = { bg: "#F3F2EE", img: PHOTOS.polloArroz };
+  // rutinas: cada una es una pantalla propia. Ejercicio = [nombre, series × repeticiones, nota, clave, paso del peso en kg].
+  // La clave es la misma en todas las rutinas donde el ejercicio se repite, así el peso guardado se comparte.
+  var MAC_BODY = [
+    { id: "pa", name: "Pierna A", full: "Pierna y glúteos A", sub: "Cuádriceps + glúteo", c: "#D6336C", ink: "#FFFFFF", picto: "gluteo", cardio: "15 min (moderado)", ex: [
+      ["Hip thrust en máquina", "4 × 8–12", "", "hip-thrust"], ["Prensa", "3 × 10–12", "", "prensa"], ["Extensión de pierna", "3 × 12–15", "", "extension-pierna"], ["Femoral sentado", "3 × 10–15", "", "femoral-sentado"], ["Abductores", "3 × 15–20", "", "abductores"], ["Pantorrilla (de pie o sentado)", "3 × 12–20", "", "pantorrilla"]] },
+    { id: "pb", name: "Pierna B", full: "Pierna y glúteos B", sub: "Femoral + glúteo", c: "#B5179E", ink: "#FFFFFF", picto: "pierna", cardio: "15 min (moderado)", ex: [
+      ["Peso muerto rumano con mancuernas", "3 × 8–12", "Ligero, con técnica", "peso-muerto-rumano", 1], ["Hip thrust en máquina", "3 × 10–12", "", "hip-thrust"], ["Prensa", "3 × 10–15", "Colocación cómoda", "prensa"], ["Femoral sentado", "3 × 10–15", "", "femoral-sentado"], ["Patada de glúteo en polea o máquina", "3 × 12–15", "", "patada-gluteo"], ["Aductores", "2 × 12–15", "", "aductores"], ["Abductores", "3 × 15–20", "", "abductores"], ["Pantorrilla", "3 × 12–20", "", "pantorrilla"]] },
+    { id: "pc", name: "Pierna C", full: "Pierna y glúteos C", sub: "Enfoque extra + estabilidad", c: "#DB2777", ink: "#FFFFFF", picto: "zancada", cardio: "15–20 min (moderado)", ex: [
+      ["Hip thrust (con barra o máquina)", "4 × 8–12", "", "hip-thrust"], ["Zancada búlgara o split squat", "3 × 10–12", "Peso ligero o moderado · cada pierna", "zancada-bulgara", 1], ["Prensa", "3 × 10–12", "", "prensa"], ["Femoral sentado", "3 × 10–15", "", "femoral-sentado"], ["Patada de glúteo en polea", "3 × 12–15", "", "patada-gluteo"], ["Abductores", "3 × 15–20", "", "abductores"], ["Plancha / core", "", "", "core"]] },
+    { id: "ta", name: "Tren superior A", full: "Tren superior (completo)", sub: "Completo", c: "#7B5CFF", ink: "#FFFFFF", picto: "alta", cardio: "20 min (moderado)", ex: [
+      ["Jalón al pecho", "3 × 10–12", "", "jalon-pecho"], ["Remo sentado", "3 × 10–12", "", "remo-sentado"], ["Press de pecho en máquina", "3 × 10–12", "", "press-pecho"], ["Elevación lateral", "3 × 12–15", "", "elevacion-lateral", 1], ["Posterior de hombro (pec deck)", "2 × 12–15", "", "posterior-hombro"], ["Curl de bíceps", "2 × 10–15", "", "curl-biceps", 1], ["Extensión de tríceps en polea", "2 × 10–15", "", "triceps-polea"]] },
+    { id: "tb", name: "Tren superior B", full: "Tren superior (descarga / ligero)", sub: "Descarga / ligero", c: "#5F3DC4", ink: "#FFFFFF", picto: "brazo", cardio: "20–25 min (suave o moderado)", ex: [
+      ["Remo sentado", "2 × 12", "", "remo-sentado"], ["Jalón al pecho", "2 × 12", "", "jalon-pecho"], ["Press de pecho en máquina", "2 × 12", "", "press-pecho"], ["Elevación lateral", "2 × 15", "", "elevacion-lateral", 1], ["Posterior de hombro", "2 × 15", "", "posterior-hombro"], ["Curl de bíceps", "2 × 12", "", "curl-biceps", 1], ["Extensión de tríceps", "2 × 12", "", "triceps-polea"], ["Core (plancha, crunch o máquina)", "3 × 15–20", "", "core"]] }
+  ];
+  // cardio: cada rutina trae estas opciones para elegir
+  var MAC_CARDIO = [
+    { id: "bici", met: 6, name: "Bicicleta estática", sub: "", c: "#0B7BA3", ink: "#FFFFFF", picto: "bici", nivel: "Muy buena opción", pts: ["Bajo impacto", "Cuida las rodillas", "Trabaja piernas y glúteos"] },
+    { id: "eliptica", met: 5.5, name: "Elíptica", sub: "", c: "#00A896", ink: "#12142A", picto: "eliptica", nivel: "Excelente opción", pts: ["Bajo impacto", "Trabaja todo el cuerpo", "Buena para quemar calorías"] },
+    { id: "escaladora", met: 8, name: "Escaladora", sub: "StairMaster", c: "#FF6B35", ink: "#12142A", picto: "escalera", nivel: "Muy buena para glúteos", pts: ["Bajo impacto", "Alta quema de calorías", "Usa intensidad moderada"] },
+    { id: "remo", met: 7, name: "Remo", sub: "", c: "#1C7ED6", ink: "#FFFFFF", picto: "remo", nivel: "Excelente alternativa", pts: ["Bajo impacto", "Trabaja todo el cuerpo", "Buena para espalda y brazos"] },
+    { id: "caminadora", met: 5, name: "Caminadora", sub: "Con inclinación", c: "#FFB703", ink: "#12142A", picto: "caminadora", nivel: "Se puede usar", pts: ["Inclinación de 6 a 12 %", "Ritmo moderado"], nota: "Si hay dolor de rodilla, mejor usar otras opciones." }
+  ];
+
+  // cardio de Angel: las mismas máquinas, sin textos de apoyo
+  var ANGEL_CARDIO = MAC_CARDIO.map(function (c) {
+    return { id: c.id, met: c.met, name: c.name, sub: c.sub, c: c.c, ink: c.ink, picto: c.picto, nivel: "", pts: [] };
+  });
+  /* ---------- comida de Angel (pollo 250 g en todos los platillos; el resto, porciones para un joven de 20 años y 75 kg; calorías y macros estimados) ---------- */
+  var ANGEL_SLOTS = [
+    { k: "des", name: "Desayuno", sn: "Des", sub: "", at: "8:00", m: 480 },
+    { k: "com", name: "Comida", sn: "Com", sub: "", at: "14:00", m: 840 },
+    { k: "cen", name: "Cena", sn: "Cena", sub: "", at: "20:30", m: 1230 }
+  ];
+  var POLLO_ARROZ = { bg: "#F3F2EE", img: PHOTOS.polloArroz };
+  var GUAC_POLLO = { bg: "#F3F2EE", img: PHOTOS.guacPollo };
+  var ANGEL_MEALS = {
+    des: [
+      M("Pollo con arroz y aguacate", "Alto en proteína", 25, 84, 63, 21, 6,
+        ["250 g de pollo cocido", "200 g de arroz cocido", "1/2 aguacate (80 g)", "Sal, limón y pimienta"],
+        ["Cocina el pollo a la plancha con sal, limón y pimienta.", "Calienta el arroz.", "Sirve con el aguacate en rebanadas."], POLLO_ARROZ),
+      M("Atún de lata con aguacate, limón y tostadas de arroz", "Rápido", 8, 60, 42, 26, 11,
+        ["2 latas de atún en agua", "1 aguacate (150 g)", "Jugo de 1 limón", "4 tostadas de arroz", "Sal y pimienta"],
+        ["Escurre el atún y mézclalo con el limón, sal y pimienta.", "Machaca o rebana el aguacate.", "Sirve sobre las tostadas de arroz."],
+        { bg: "#F3F2EE", img: PHOTOS.atunLata }),
+      M("Atún sellado curtido en limón con aguacate y salsas negras", "Con atún fresco", 20, 68, 49, 17, 9,
+        ["250 g de atún fresco", "Jugo de 3 limones", "1/2 aguacate (80 g)", "Salsas negras al gusto (2 cdas)", "4 tostadas"],
+        ["Sella el atún 30 segundos por lado en sartén muy caliente y córtalo en cuadros.", "Curte los cuadros en jugo de limón 10 minutos.", "Sirve con el aguacate, las salsas negras y las tostadas."],
+        { bg: "#F3F2EE", img: PHOTOS.atunCubos })
+    ],
+    com: [
+      M("3 tacos de atún sellado con aguacate", "Tacos", 20, 68, 54, 27, 16,
+        ["3 tortillas de maíz", "250 g de atún fresco", "1 aguacate (150 g) en rebanadas", "Limón y salsa al gusto"],
+        ["Sella el atún por todos lados y córtalo en cuadros.", "Calienta las tortillas.", "Arma los tacos con el atún y las rebanadas de aguacate."],
+        { bg: "#F3F2EE", img: PHOTOS.tacosAtun }),
+      M("Guacamole con pollo y galletas saladas", "Alto en proteína", 20, 84, 36, 34, 11,
+        ["250 g de pollo cocido", "Guacamole: 1 aguacate (150 g), jitomate, cebolla, cilantro y limón", "8 galletas saladas"],
+        ["Cocina el pollo a la plancha y córtalo en tiras.", "Machaca el aguacate con jitomate, cebolla, cilantro, limón y sal.", "Sirve el pollo con el guacamole y las galletas."], GUAC_POLLO),
+      M("Salmón con arroz y aguacate", "Con salmón", 20, 51, 63, 36, 6,
+        ["200 g de salmón", "200 g de arroz cocido", "1/2 aguacate (80 g)", "Limón, sal y pimienta"],
+        ["Sazona el salmón y cocínalo a la plancha 4 minutos por lado.", "Calienta el arroz.", "Sirve con el aguacate en rebanadas."],
+        { bg: "#F3F2EE", img: PHOTOS.salmonArroz }),
+      M("Pescado con arroz, aguacate y puré de papa", "Pescado", 30, 75, 81, 27, 9,
+        ["250 g de pescado blanco", "150 g de arroz cocido", "1/2 aguacate (80 g)", "200 g de puré de papa"],
+        ["Cocina el pescado a la plancha con limón, sal y pimienta.", "Prepara el puré con papa cocida, un poco de leche y sal.", "Sirve con el arroz y el aguacate."],
+        { bg: "#F3F2EE", img: PHOTOS.pescadoPure })
+    ],
+    cen: [
+      M("Ensalada con pollo, aguacate, cacahuate y limón", "Ensalada", 20, 89, 18, 36, 11,
+        ["250 g de pollo cocido", "Lechuga, jitomate y pepino", "1/2 aguacate (80 g)", "30 g de cacahuate", "Jugo de 1 limón"],
+        ["Cocina el pollo a la plancha y córtalo en tiras.", "Mezcla las verduras y agrega el aguacate.", "Termina con el pollo, el cacahuate y el limón."],
+        { bg: "#F3F2EE", img: PHOTOS.ensaladaPollo }),
+      M("Pollo con arroz y aguacate", "Alto en proteína", 25, 83, 49, 21, 6,
+        ["250 g de pollo cocido", "150 g de arroz cocido", "1/2 aguacate (80 g)", "Sal, limón y pimienta"],
+        ["Cocina el pollo a la plancha con sal, limón y pimienta.", "Calienta el arroz.", "Sirve con el aguacate en rebanadas."], POLLO_ARROZ),
+      M("Guacamole con pollo y galletas saladas", "Alto en proteína", 20, 84, 36, 34, 11,
+        ["250 g de pollo cocido", "Guacamole: 1 aguacate (150 g), jitomate, cebolla, cilantro y limón", "8 galletas saladas"],
+        ["Cocina el pollo a la plancha y córtalo en tiras.", "Machaca el aguacate con jitomate, cebolla, cilantro, limón y sal.", "Sirve el pollo con el guacamole y las galletas."], GUAC_POLLO)
+    ]
+  };
+  var PLANS = {
+    angel: { slots: ANGEL_SLOTS, meals: ANGEL_MEALS, mver: 1, body: ANGEL_BODY, cardio: ANGEL_CARDIO },
+    macarena: { slots: MAC_SLOTS, meals: MAC_MEALS, body: MAC_BODY, cardio: MAC_CARDIO, goal: [1500, 1600], dash: { kg: 60, stepGoal: 8000 } }
+  };
+
+  /* ---------- hoy: la app sabe qué día y qué hora es ---------- */
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function today() {
+    var d = new Date();
+    return {
+      d: d,
+      iso: d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()),
+      dow: (d.getDay() + 6) % 7,
+      mins: d.getHours() * 60 + d.getMinutes()
+    };
+  }
+  var T = today();
+  function todayLabel() { return DAYS[T.dow] + " " + T.d.getDate() + " de " + MONTHS[T.d.getMonth()]; }
+
+  /* ---------- almacenamiento: una clave por perfil, nada se mezcla ---------- */
+  var KEY = "mi-plan-semanal-v2";
+  function readJSON(k) {
+    try {
+      var raw = localStorage.getItem(k);
+      var o = raw ? JSON.parse(raw) : null;
+      return o && typeof o === "object" ? o : null;
+    } catch (e) { return null; }
+  }
+  function writeJSON(k, o) {
+    try { localStorage.setItem(k, JSON.stringify(o)); } catch (e) {}
+  }
+  function profileById(id) {
+    for (var i = 0; i < PROFILES.length; i++) if (PROFILES[i].id === id) return PROFILES[i];
+    return null;
+  }
+
+  var S = { profile: null, picks: {}, ex: {}, xl: {}, wt: {}, steps: {}, closed: {}, switching: false };
+
+  function loadPlan(id) {
+    var o = readJSON(KEY + ":" + id) || {};
+    return {
+      picks: o.picks && typeof o.picks === "object" && (o.mver || 0) === ((PLANS[id] && PLANS[id].mver) || 0) ? o.picks : {},
+      ex: o.ex && typeof o.ex === "object" ? o.ex : {},
+      xl: o.xl && typeof o.xl === "object" ? o.xl : {},
+      wt: o.wt && typeof o.wt === "object" ? o.wt : {},
+      steps: o.steps && typeof o.steps === "object" ? o.steps : {}
+    };
+  }
+  function savePlan() {
+    var ks = Object.keys(S.picks).sort();
+    while (ks.length > 14) delete S.picks[ks.shift()];
+    var es = Object.keys(S.ex).sort();
+    while (es.length > 70) delete S.ex[es.shift()];
+    var xs = Object.keys(S.xl).sort();
+    while (xs.length > 70) delete S.xl[xs.shift()];
+    var ss = Object.keys(S.steps).sort();
+    while (ss.length > 70) delete S.steps[ss.shift()];
+    writeJSON(KEY + ":" + S.profile, { mver: PLANS[S.profile].mver || 0, picks: S.picks, ex: S.ex, xl: S.xl, wt: S.wt, steps: S.steps });
+  }
+  function setProfile(id) {
+    var pl = loadPlan(id);
+    S.profile = id;
+    S.picks = pl.picks;
+    S.ex = pl.ex;
+    S.xl = pl.xl;
+    S.wt = pl.wt;
+    S.steps = pl.steps;
+    S.closed = {};
+    document.documentElement.setAttribute("data-profile", id);
+    writeJSON(KEY, { last: id });
+  }
+  (function boot() {
+    var m = readJSON(KEY);
+    if (m && profileById(m.last)) setProfile(m.last);
+  })();
+
+  /* ---------- utilidades ---------- */
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (ch) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
+    });
+  }
+  function fmt(x) { return Number(x).toLocaleString("es-MX"); }
+  function meals() { return PLANS[S.profile].meals; }
+  function slots() { return PLANS[S.profile].slots; }
+  function slotObj(k) {
+    var l = slots();
+    for (var i = 0; i < l.length; i++) if (l[i].k === k) return l[i];
+    return null;
+  }
+  // 3 opciones por tiempo; el día de la semana rota cuáles toca ver
+  function opts(slot) {
+    var pool = meals()[slot], n = pool.length;
+    var cnt = n <= 4 ? n : 3, out = [];
+    for (var k = 0; k < cnt; k++) {
+      var i = n <= 4 ? k : (3 * T.dow + k) % n;
+      out.push({ i: i, m: pool[i] });
+    }
+    return out;
+  }
+  function pickedIdx(slot) {
+    var v = (S.picks[T.iso] || {})[slot];
+    return typeof v === "number" && meals()[slot][v] ? v : null;
+  }
+  function picked(slot) {
+    var i = pickedIdx(slot);
+    return i == null ? null : meals()[slot][i];
+  }
+  function count() {
+    return slots().filter(function (s) { return picked(s.k); }).length;
+  }
+  function totals() {
+    var t = { kcal: 0, p: 0, c: 0, f: 0 };
+    slots().forEach(function (s) {
+      var m = picked(s.k);
+      if (m) { t.kcal += m.kcal; t.p += m.p; t.c += m.c; t.f += m.f; }
+    });
+    return t;
+  }
+  function range() {
+    var lo = 0, hi = 0;
+    slots().forEach(function (s) {
+      var k = opts(s.k).map(function (o) { return o.m.kcal; });
+      lo += Math.min.apply(null, k);
+      hi += Math.max.apply(null, k);
+    });
+    return [lo, hi];
+  }
+
+  var ICON = {
+    back: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>',
+    arrow: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+    check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    swap: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h11l-3-3M17 17H6l3 3"/></svg>'
+  };
+
+  // anillo con un arco por tiempo de comida
+  var RC = 2 * Math.PI * 100;
+  function ringSVG(n) {
+    n = n || 5;
+    var step = 360 / n, L = RC * (step - 10) / 360 - 16, g = "";
+    for (var i = 0; i < n; i++) {
+      var rot = (-90 + i * step + 5 + (8 / 100) * 180 / Math.PI).toFixed(2);
+      g += '<g transform="rotate(' + rot + ' 120 120)">' +
+        '<circle class="arc-t" cx="120" cy="120" r="100" stroke-width="16" stroke-linecap="round" style="stroke-dasharray:' + L.toFixed(2) + ' 700"/>' +
+        '<circle class="arc" data-i="' + i + '" cx="120" cy="120" r="100" stroke-width="16" stroke-linecap="round" style="--L:' + L.toFixed(2) + ';--i:' + i + '"/></g>';
+    }
+    return '<svg class="ringsvg" viewBox="0 0 240 240" aria-hidden="true">' + g + '</svg>';
+  }
+  function ekgSVG() {
+    var d = "M0 36 H52 L62 36 L73 8 L87 58 L99 22 L107 36 H200";
+    return '<svg class="ekg" viewBox="0 0 200 64" aria-hidden="true"><path class="base" d="' + d + '"/><path class="run" pathLength="100" d="' + d + '"/></svg>';
+  }
+
+  /* ---------- vistas ---------- */
+  function top(title, back) {
+    var p = profileById(S.profile);
+    return '<header class="top"><a class="back" href="' + (back || "#inicio") + '" aria-label="Volver">' + ICON.back + '</a>' +
+      '<span class="top-title">' + title + '</span>' +
+      '<span class="av ' + p.id + '" aria-hidden="true">' + p.ini + '</span></header>';
+  }
+
+  function pickView() {
+    var cards = PROFILES.map(function (p) {
+      return '<button class="pcard ' + p.id + '" type="button" data-act="enter" data-id="' + p.id + '" aria-label="Entrar como ' + esc(p.name) + '">' +
+        '<span class="pc-mono" aria-hidden="true">' + p.ini.charAt(0) + '</span>' +
+        '<span class="pc-go" aria-hidden="true">' + ICON.arrow + '</span>' +
+        '<span class="pc-name"><span>' + esc(p.first) + '</span><span>' + esc(p.last) + '</span></span></button>';
+    }).join("");
+    return '<main class="pick"><h1 class="pick-title">¿Quién eres?</h1><div class="pick-grid">' + cards + '</div></main>';
+  }
+
+  function homeView() {
+    var p = profileById(S.profile);
+    var chars = p.first.split("").map(function (ch, i) {
+      return '<span class="ch" style="--i:' + i + '">' + esc(ch) + '</span>';
+    }).join("");
+    return '<main>' +
+      '<section class="home-hero">' +
+      '<span class="hero-mono" aria-hidden="true">' + p.ini.charAt(0) + '</span>' +
+      '<div class="hero-row"><span class="pill">' + todayLabel() + '</span>' +
+      '<button class="pill" type="button" data-act="switch">' + ICON.swap + 'Cambiar de perfil</button></div>' +
+      '<h1 class="hello"><span class="hello-small">Hola,</span>' +
+      '<span class="hello-name"><span class="sr">' + esc(p.first) + '</span><span aria-hidden="true">' + chars + '</span></span></h1>' +
+      heroStatsHTML() +
+      '</section>' +
+      '<div class="tiles">' +
+      '<a class="tile food" href="#comida"><div class="tile-top"><span class="mini" data-ring>' + ringSVG(slots().length) + '<span class="mini-n">' + count() + '/' + slots().length + '</span></span><span class="go">' + ICON.arrow + '</span></div><h2>Comida</h2></a>' +
+      '<a class="tile ex" href="#ejercicio"><div class="tile-top">' + ekgSVG() + '<span class="go">' + ICON.arrow + '</span></div><h2>Ejercicio</h2></a>' +
+      '</div>' +
+      dashProgressHTML() +
+      '</main>';
+  }
+
+  function macroBar(m) {
+    var tot = 4 * m.p + 4 * m.c + 9 * m.f;
+    function w(x) { return (x / tot * 100).toFixed(1); }
+    return '<div class="mbar" role="img" aria-label="Reparto de calorías: proteína ' + w(4 * m.p) + '%, carbohidratos ' + w(4 * m.c) + '%, grasas ' + w(9 * m.f) + '%">' +
+      '<i class="p" style="width:' + w(4 * m.p) + '%"></i><i class="c" style="width:' + w(4 * m.c) + '%"></i><i class="f" style="width:' + w(9 * m.f) + '%"></i></div>';
+  }
+  function mt(cls, label, v) {
+    return '<div class="mt"><small><i class="sw ' + cls + '"></i>' + label + '</small><b>' + v + '<i>g</i></b></div>';
+  }
+
+  function detail(s, m) {
+    return '<article class="detail" aria-label="Detalle de ' + esc(m.name) + '">' +
+      '<div class="d-head"><h3>' + esc(m.name) + '</h3>' +
+      '<div class="d-actions"><button class="link" type="button" data-act="hide" data-slot="' + s.k + '">Ocultar</button>' +
+      '<button class="link" type="button" data-act="unpick" data-slot="' + s.k + '">Quitar elección</button></div></div>' +
+      '<div class="d-kcal"><b>' + m.kcal + '</b><span>kcal por porción</span></div>' +
+      macroBar(m) +
+      '<div class="mgrid">' + mt("p", "Proteína", m.p) + mt("c", "Carbohidratos", m.c) + mt("f", "Grasas", m.f) + mt("x", "Fibra", m.fib) + '</div>' +
+      '<div class="d-cols">' +
+      '<div><h4>Ingredientes</h4><ul>' + m.ing.map(function (x) { return '<li><span>' + esc(x) + '</span></li>'; }).join("") + '</ul></div>' +
+      '<div><h4>Preparación · ' + m.min + ' min</h4><ol>' + m.steps.map(function (x) { return '<li><span>' + esc(x) + '</span></li>'; }).join("") + '</ol></div>' +
+      '</div></article>';
+  }
+
+  function slotHTML(s) {
+    var o = opts(s.k);
+    var sel = pickedIdx(s.k);
+    var closed = !!S.closed[s.k];
+    var ks = o.map(function (x) { return x.m.kcal; });
+    var cards = o.map(function (x) {
+      var on = sel === x.i;
+      return '<button class="opt' + (on ? " on" : "") + (on && closed ? " closed" : "") + '" type="button" data-act="pick" data-slot="' + s.k + '" data-i="' + x.i + '" data-fk="pick-' + s.k + '-' + x.i + '" aria-pressed="' + on + '">' +
+        '<span class="opt-img" style="--ba:' + ((x.m.art && x.m.art.bg) || "#F1ECE0") + '"><span class="opt-art">' + foodArt(x.m.art) + '</span><span class="tag">' + esc(x.m.tag) + '</span><span class="tick">' + ICON.check + '</span></span>' +
+        '<span class="opt-body"><span class="opt-name">' + esc(x.m.name) + '</span>' +
+        '<span class="opt-meta"><b>' + x.m.kcal + '</b> kcal<span aria-hidden="true">·</span>' + ICON.clock + x.m.min + ' min<span class="more">Ver detalle</span></span></span></button>';
+    }).join("");
+    return '<section class="slot" id="slot-' + s.k + '" data-slot="' + s.k + '" aria-labelledby="h-' + s.k + '">' +
+      '<div class="slot-head"><h2 id="h-' + s.k + '">' + s.name + (s.sub ? '<small>' + s.sub + '</small>' : '') + '<span class="now" id="now-' + s.k + '" hidden>Ahora</span></h2>' +
+      '<span class="slot-meta">' + s.at + ' · ' + Math.min.apply(null, ks) + '–' + Math.max.apply(null, ks) + ' kcal</span></div>' +
+      '<div class="opts">' + cards + '</div>' +
+      '<div class="detail-wrap' + (sel != null && !closed ? " open" : "") + '"><div class="detail-clip"><div class="detail-in">' +
+      (sel != null ? detail(s, meals()[s.k][sel]) : "") + '</div></div></div>' +
+      '</section>';
+  }
+
+  function foodView() {
+    var p = profileById(S.profile), plan = PLANS[S.profile], r = range(), t = totals(), n = count();
+    var nav = slots().map(function (s) {
+      return '<button class="sn' + (picked(s.k) ? " on" : "") + '" type="button" id="sn-' + s.k + '" data-act="goslot" data-slot="' + s.k + '" aria-label="Ir a ' + s.name + '">' + s.sn + '</button>';
+    }).join("");
+    function chip(id, label, v) {
+      return '<div class="hchip"><small>' + label + '</small><b id="' + id + '">' + (n ? v + " g" : "—") + '</b></div>';
+    }
+    return top("Comida") +
+      '<main><h1 class="sr">Comida</h1>' +
+      '<section class="hero" id="hero">' +
+      '<div class="hero-grid">' +
+      '<div class="hero-date"><span class="pill">Plan de ' + esc(p.first) + '</span><span class="dnum tnum">' + T.d.getDate() + '</span><span class="dow">' + DAYS[T.dow] + '</span><span class="mon">' + MONTHS[T.d.getMonth()] + '</span></div>' +
+      '<div class="hero-ring"><div class="ring" data-ring>' + ringSVG(slots().length) +
+      '<div class="ring-c"><span class="ring-n tnum" id="hk">0</span><span class="ring-u">kcal</span></div></div>' +
+      '<div class="snav">' + nav + '</div></div>' +
+      '</div>' +
+      '<div class="hchips">' + chip("h-p", "Proteína", t.p) + chip("h-c", "Carbohidratos", t.c) + chip("h-f", "Grasas", t.f) + '</div>' +
+      '<p class="hrange" id="hrange">' + (plan.goal ? 'Meta del plan · ' + fmt(plan.goal[0]) + '–' + fmt(plan.goal[1]) : 'Rango de hoy · ' + fmt(r[0]) + '–' + fmt(r[1])) + ' kcal</p>' +
+      '</section>' +
+      slots().map(slotHTML).join("") +
+      '<p class="disclaimer">Calorías y macronutrientes son aproximados por porción. Esta es una guía general, no sustituye la indicación de un nutriólogo, sobre todo si tienes alguna condición de salud.</p>' +
+      '</main>';
+  }
+
+  function body() { return PLANS[S.profile].body; }
+  function cardioList() { return PLANS[S.profile].cardio || []; }
+  function xItem(id) {
+    var l = body();
+    for (var i = 0; i < l.length; i++) if (l[i].id === id) return l[i];
+    return null;
+  }
+  function isoOf(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  // las fechas (lunes a domingo) de la semana en curso
+  function weekIsos() {
+    var out = [];
+    for (var i = 0; i < 7; i++) {
+      var d = new Date(T.d);
+      d.setDate(T.d.getDate() - T.dow + i);
+      out.push(isoOf(d));
+    }
+    return out;
+  }
+  function shortDate(iso) {
+    var p = String(iso).split("-");
+    return Number(p[2]) + " " + MONTHS_S[Number(p[1]) - 1];
+  }
+  function fmtKg(x) { return String(x).replace(",", "."); }
+  function joinY(a) { return a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " y " + a[a.length - 1]; }
+  // peso escrito: null si está vacío, NaN si no es un número válido
+  function parseKg(v) {
+    var s = String(v == null ? "" : v).replace(",", ".").trim();
+    if (!s) return null;
+    var n = parseFloat(s);
+    return isFinite(n) && n >= 0 && n <= 500 ? Math.round(n * 100) / 100 : NaN;
+  }
+
+  /* ----- registro de rutinas: S.xl[fecha] = { r: { rutina: { clave: { s: series hechas, kg } } }, c: { rutina: [cardio] } } ----- */
+  // cuántas series trae el ejercicio ("4 × 8–12" son 4; si no dice, 1)
+  function exSets(e) {
+    var m = /^\s*(\d+)\s*(?:[×x]|series)/i.exec(e[1] || "");
+    return m ? Math.max(1, Number(m[1])) : 1;
+  }
+  function rLog(iso, rid) {
+    var d = S.xl[iso];
+    return d && d.r && d.r[rid] ? d.r[rid] : null;
+  }
+  // series hechas de un ejercicio (un registro viejo sin series cuenta como completo)
+  function rSets(l, e) {
+    var v = l ? l[e[3]] : undefined, n = exSets(e);
+    if (v === undefined) return 0;
+    if (v && typeof v === "object") return Math.max(0, Math.min(Number(v.s) || 0, n));
+    return n;
+  }
+  function rKgOf(l, key) {
+    var v = l ? l[key] : undefined;
+    if (v && typeof v === "object") return v.kg == null ? null : v.kg;
+    return typeof v === "number" ? v : null;
+  }
+  function rTotal(it) { return it.ex.reduce(function (a, e) { return a + exSets(e); }, 0); }
+  // series hechas en total ese día
+  function rCount(iso, rid) {
+    var it = xItem(rid), l = rLog(iso, rid);
+    if (!it || !l) return 0;
+    return it.ex.reduce(function (a, e) { return a + rSets(l, e); }, 0);
+  }
+  // ejercicios con todas sus series hechas
+  function rDoneEx(iso, rid) {
+    var it = xItem(rid), l = rLog(iso, rid);
+    if (!it || !l) return 0;
+    return it.ex.filter(function (e) { return rSets(l, e) >= exSets(e); }).length;
+  }
+  function tidyDay() {
+    var d = S.xl[T.iso];
+    if (!d) return;
+    if (d.r) { Object.keys(d.r).forEach(function (k) { if (!Object.keys(d.r[k]).length) delete d.r[k]; }); if (!Object.keys(d.r).length) delete d.r; }
+    if (d.c) { Object.keys(d.c).forEach(function (k) { if (!d.c[k].length) delete d.c[k]; }); if (!Object.keys(d.c).length) delete d.c; }
+    if (!d.r && !d.c) delete S.xl[T.iso];
+  }
+  function rPut(rid, e, s, kg) {
+    var d = S.xl[T.iso] = S.xl[T.iso] || {};
+    d.r = d.r || {};
+    d.r[rid] = d.r[rid] || {};
+    if (s <= 0) delete d.r[rid][e[3]]; else d.r[rid][e[3]] = { s: s, kg: kg };
+    tidyDay();
+  }
+  function cLogAt(iso, rid) {
+    var d = S.xl[iso];
+    return d && d.c && d.c[rid] ? d.c[rid] : [];
+  }
+  function cLog(rid) { return cLogAt(T.iso, rid); }
+  // si la rutina trae cardio, hay que elegirlo para darla por completa
+  function needsCardio(it) { return cardioList().length > 0 && !!it.cardio; }
+  // rutina completa = todas las series + el cardio elegido
+  function rComplete(iso, rid) {
+    var it = xItem(rid);
+    if (!it || !it.ex) return false;
+    return rCount(iso, rid) >= rTotal(it) && (!needsCardio(it) || cLogAt(iso, rid).length > 0);
+  }
+  // 2 = día completo, 1 = con avance, 0 = sin nada
+  function dayState(iso) {
+    var done = false;
+    body().forEach(function (b) { if (b.ex && rComplete(iso, b.id)) done = true; });
+    if (done || (S.ex[iso] && S.ex[iso].length)) return 2;
+    return xlActive(iso) ? 1 : 0;
+  }
+  function xlActive(iso) {
+    var d = S.xl[iso];
+    return !!(d && ((d.r && Object.keys(d.r).length) || (d.c && Object.keys(d.c).length)));
+  }
+  function setWeight(key, kg) {
+    if (kg == null) delete S.wt[key]; else S.wt[key] = { kg: kg, d: T.iso };
+  }
+  // otras rutinas donde se repite el ejercicio (comparten el peso guardado)
+  function sharedWith(rid, key) {
+    return body().filter(function (b) {
+      return b.id !== rid && b.ex && b.ex.some(function (x) { return x[3] === key; });
+    }).map(function (b) { return b.name; });
+  }
+  function exHint(rid, e) {
+    var key = e[3], l = rLog(T.iso, rid), sv = S.wt[key], n = exSets(e), s = rSets(l, e), kg = rKgOf(l, key), out;
+    if (s >= n) out = "Completo hoy" + (kg != null ? " con " + fmtKg(kg) + " kg" : "");
+    else if (s > 0) out = s + " de " + n + " series" + (kg != null ? " · " + fmtKg(kg) + " kg" : "");
+    else if (sv) out = "Último peso: " + fmtKg(sv.kg) + " kg · " + shortDate(sv.d);
+    else out = "Escribe el peso una vez y se guarda";
+    var others = sharedWith(rid, key);
+    if (others.length) out += " · También en " + joinY(others);
+    return out;
+  }
+
+  // figuras sencillas; la parte que se mueve lleva la clase "mv"
+  function picto(id) {
+    var P = {
+      pierna: '<g class="mv a-bob"><circle class="hd" cx="44" cy="22" r="8"/><path d="M46 34L52 56"/><path d="M52 56L72 60 66 86"/><path d="M50 38L74 40"/></g><path d="M16 92H86" opacity=".45"/>',
+      zancada: '<g class="mv a-bob"><circle class="hd" cx="42" cy="20" r="8"/><path d="M43 32L45 56"/><path d="M45 56L64 60 64 88"/><path d="M45 56L28 74 14 90"/><path d="M44 38L56 48M44 38L34 50"/></g><path d="M8 92H90" opacity=".45"/>',
+      gluteo: '<path d="M12 88H88" opacity=".45"/><circle class="hd" cx="16" cy="72" r="7"/><path d="M24 82H38"/><g class="mv a-bridge"><path d="M26 78L50 56 70 62 72 86"/></g>',
+      brazo: '<circle class="hd" cx="38" cy="20" r="8"/><path d="M38 32V60"/><path d="M38 60L32 90M38 60L46 90"/><path d="M38 36L48 54"/><g class="mv a-curl"><path d="M48 54L66 40"/><path d="M62 32L74 46"/></g>',
+      alta: '<circle class="hd" cx="50" cy="40" r="8"/><path d="M50 52V74"/><path d="M50 74L42 94M50 74L58 94"/><g class="mv a-lift"><path d="M50 56L36 48 32 30M50 56L64 48 68 30"/><path d="M16 26H84"/><path d="M18 19V33M82 19V33"/></g>',
+      abdomen: '<path d="M10 90H90" opacity=".45"/><path d="M58 80L74 62 88 82"/><g class="mv a-crunch"><circle class="hd" cx="26" cy="58" r="7"/><path d="M58 80L34 66"/><path d="M36 66L30 62"/></g>',
+      banca: '<path d="M10 78H90" opacity=".45"/><path d="M14 70H76" stroke-width="5" opacity=".6"/><circle class="hd" cx="18" cy="60" r="7"/><path d="M28 64L60 64 72 52 76 76"/><g class="mv a-lift"><path d="M42 62V36"/><path d="M26 30H58"/><path d="M28 23V37M56 23V37"/></g>',
+      cardio: '<g class="mv a-jog"><circle class="hd" cx="58" cy="20" r="8"/><path d="M54 32L46 56"/><path d="M52 36L66 48 76 40M52 36L40 48 30 42"/><path d="M46 56L62 68 56 90M46 56L34 72 16 80"/></g><path d="M8 38H22M4 54H18M10 70H20" opacity=".45"/>',
+      bici: '<g class="mv a-spin a-spin1"><circle cx="26" cy="68" r="15"/><path d="M26 56V80M14 68H38" stroke-width="3.5"/></g><g class="mv a-spin a-spin2"><circle cx="74" cy="68" r="15"/><path d="M74 56V80M62 68H86" stroke-width="3.5"/></g><path d="M26 68L42 42H64L74 68M42 42L50 68H26M64 42L60 30M54 30H68M38 38H48"/>',
+      eliptica: '<path d="M14 92H86" opacity=".45"/><path d="M70 26L62 90"/><g class="mv a-jog"><circle class="hd" cx="44" cy="22" r="8"/><path d="M45 34V60"/><path d="M45 40L66 34"/><path d="M45 60L36 88M45 60L58 88"/></g>',
+      escalera: '<path d="M8 92H28V76H46V60H64V44H92" opacity=".5"/><g class="mv a-lift"><circle class="hd" cx="56" cy="18" r="8"/><path d="M54 30L48 52"/><path d="M52 36L64 42M52 36L42 44"/><path d="M48 52L60 58 56 74M48 52L40 66"/></g>',
+      remo: '<path d="M8 88H92" opacity=".45"/><path d="M22 76H44"/><g class="mv a-row"><circle class="hd" cx="60" cy="30" r="8"/><path d="M54 40L42 62"/><path d="M42 62L64 66 70 88"/><path d="M52 46L76 50"/><path d="M76 42V58"/></g>',
+      caminadora: '<path d="M14 88H80" stroke-width="6"/><path d="M84 88V40L70 34"/><g class="mv a-jog"><circle class="hd" cx="42" cy="18" r="8"/><path d="M42 30L38 54"/><path d="M40 36L54 46 64 40M40 36L28 46 18 40"/><path d="M38 54L52 66 46 84M38 54L26 68 12 76"/></g>'
+    };
+    return '<svg viewBox="0 0 100 100" aria-hidden="true">' + (P[id] || "") + '</svg>';
+  }
+
+  /* ----- lista de rutinas (pantalla de ejercicio) ----- */
+  function tileHTML(b) {
+    return '<button class="xt" type="button" data-act="' + (b.ex ? "xopen" : "xpick") + '" data-id="' + b.id + '" aria-pressed="false" style="--tc:' + b.c + ';--tc-ink:' + b.ink + '">' +
+      '<span class="xt-art">' + picto(b.picto || b.id) + '</span>' +
+      '<span class="xt-bottom"><span class="xt-badge"><span class="xt-bt"></span></span><span class="xt-name">' + esc(b.name) + '</span>' +
+      (b.sub ? '<span class="xt-sub">' + esc(b.sub) + '</span>' : '') +
+      '<span class="xt-week" aria-hidden="true">' + DAYS_S.map(function () { return "<i></i>"; }).join("") + '</span></span></button>';
+  }
+
+  function exerciseView() {
+    var p = profileById(S.profile);
+    var wdays = "LMMJVSD".split("").map(function (l, i) {
+      return '<span class="wd' + (i === T.dow ? " today" : "") + '" style="--i:' + i + '" title="' + DAYS[i] + '">' + l + '</span>';
+    }).join("");
+    return top("Ejercicio") +
+      '<main><h1 class="sr">Ejercicio</h1>' +
+      '<section class="hero boot" id="xhero">' +
+      '<div class="hero-grid">' +
+      '<div class="hero-date"><span class="pill">Plan de ' + esc(p.first) + '</span><span class="dnum tnum">' + T.d.getDate() + '</span><span class="dow">' + DAYS[T.dow] + '</span><span class="mon">' + MONTHS[T.d.getMonth()] + '</span></div>' +
+      '<div class="hero-ring"><div class="wk" aria-label="Días con ejercicio esta semana">' + wdays + '</div></div>' +
+      '</div>' +
+      '<div class="hchips two"><div class="hchip"><small>Hoy</small><b id="x-today">—</b></div><div class="hchip"><small>Esta semana</small><b id="x-count">0 de ' + body().length + '</b></div></div>' +
+      '</section>' +
+      '<div class="xgrid" style="margin-top:14px">' + body().map(tileHTML).join("") + '</div>' +
+      '</main>';
+  }
+
+  // refleja lo registrado: lo de hoy, lo que ya se hizo antes en la semana y los días de la semana
+  function paintExercise(initial) {
+    var w = weekIsos();
+    var tiles = app.querySelectorAll(".xt");
+    var parts = 0, todayNames = [];
+    for (var t = 0; t < tiles.length; t++) {
+      var el = tiles[t], id = el.getAttribute("data-id"), it = xItem(id);
+      var bt = el.querySelector(".xt-bt");
+      var dots = el.querySelectorAll(".xt-week i");
+      var isToday, isDone, text = "", full = [], part = [], i;
+      if (it.ex) {
+        // rutina con ejercicios: series de cada día y cardio elegido; solo cuenta como hecha con las dos cosas
+        var total = rTotal(it), n = [], cmp = [], act = [];
+        for (i = 0; i < 7; i++) {
+          n.push(rCount(w[i], id));
+          cmp.push(rComplete(w[i], id));
+          act.push(n[i] > 0 || cLogAt(w[i], id).length > 0);
+        }
+        for (i = 0; i < T.dow; i++) { if (cmp[i]) full.push(i); else if (act[i]) part.push(i); }
+        isToday = act[T.dow];
+        isDone = !isToday && full.length > 0;
+        if (cmp[T.dow] || full.length) parts++;
+        var noCardio = n[T.dow] >= total && !cmp[T.dow];
+        if (isToday) todayNames.push(it.name + (cmp[T.dow] ? " · completa" : noCardio ? " · falta cardio" : " " + n[T.dow] + "/" + total));
+        if (isToday) text = ICON.check + (cmp[T.dow] ? "Hoy · completa" : noCardio ? "Hoy · falta cardio" : "Hoy · " + n[T.dow] + "/" + total + " series");
+        else if (full.length) text = ICON.check + "Hecho · " + full.map(function (d) { return DAYS_S[d]; }).join(", ");
+        else if (part.length) text = "Parcial · " + part.map(function (d) { return DAYS_S[d]; }).join(", ");
+        for (i = 0; i < dots.length; i++) {
+          dots[i].classList.toggle("on", i <= T.dow && cmp[i]);
+          dots[i].classList.toggle("part", i <= T.dow && !cmp[i] && act[i]);
+        }
+      } else {
+        // parte del cuerpo sin ejercicios definidos: se marca y ya
+        var days = [];
+        for (i = 0; i <= T.dow; i++) { var l = S.ex[w[i]]; if (l && l.indexOf(id) >= 0) days.push(i); }
+        isToday = days.indexOf(T.dow) >= 0;
+        var earlier = days.filter(function (d) { return d < T.dow; });
+        isDone = !isToday && earlier.length > 0;
+        if (days.length) parts++;
+        if (isToday) todayNames.push(it.name);
+        if (isToday) text = ICON.check + "Hoy";
+        else if (earlier.length) text = ICON.check + "Hecho · " + earlier.map(function (d) { return DAYS_S[d]; }).join(", ");
+        for (i = 0; i < dots.length; i++) dots[i].classList.toggle("on", days.indexOf(i) >= 0);
+      }
+      el.classList.toggle("on", isToday);
+      el.classList.toggle("done", isDone);
+      el.setAttribute("aria-pressed", isToday ? "true" : "false");
+      if (text) bt.innerHTML = text;
+    }
+    var tn = document.getElementById("x-today");
+    if (tn) tn.textContent = todayNames.length ? todayNames.join(", ") : "—";
+    var cn = document.getElementById("x-count");
+    if (cn) cn.textContent = parts + " de " + body().length;
+    function setDots() {
+      var wds = app.querySelectorAll(".wd");
+      for (var j = 0; j < wds.length; j++) {
+        var st = j <= T.dow ? dayState(w[j]) : 0;
+        wds[j].classList.toggle("on", st === 2);
+        wds[j].classList.toggle("part", st === 1);
+      }
+    }
+    if (initial) requestAnimationFrame(function () { requestAnimationFrame(setDots); });
+    else setDots();
+  }
+  function bootExercise() {
+    paintExercise(true);
+    setTimeout(function () {
+      var h = document.getElementById("xhero");
+      if (h) h.classList.remove("boot");
+    }, 1700);
+  }
+  // parte del cuerpo sin ejercicios: tocar la marca para hoy
+  function xpick(id) {
+    var l = S.ex[T.iso] = S.ex[T.iso] || [];
+    var i = l.indexOf(id);
+    if (i >= 0) l.splice(i, 1); else l.push(id);
+    if (!l.length) delete S.ex[T.iso];
+    savePlan();
+    paintExercise(false);
+  }
+  // rutina con ejercicios: una pantalla propia, con el color de la rutina
+  function openRoutine(id, x, y) {
+    var it = xItem(id);
+    if (!it) return;
+    wipeTo(it.c, x, y, function () {
+      freshNext = true;
+      window.scrollTo(0, 0);
+      location.hash = "#rutina-" + id;
+    });
+  }
+
+  /* ----- pantalla de una rutina ----- */
+  function exCard(rid, e, i) {
+    var key = e[3], l = rLog(T.iso, rid), n = exSets(e), s = rSets(l, e), done = s >= n;
+    var pid = e[5] === undefined ? key : e[5];
+    var xph = pid ? EXPHOTOS[pid] : null;
+    var kg = s > 0 ? rKgOf(l, key) : null;
+    var val = kg != null ? kg : (S.wt[key] ? S.wt[key].kg : null);
+    var sets = "";
+    for (var k = 1; k <= n; k++) {
+      sets += '<button class="sb' + (k <= s ? " on" : "") + '" type="button" data-act="rset" data-k="' + key + '" data-n="' + k + '" aria-pressed="' + (k <= s) + '" aria-label="Serie ' + k + ' de ' + n + '">' +
+        '<span class="sb-num">' + k + '</span><span class="sb-tick">' + ICON.check + '</span></button>';
+    }
+    return '<article class="ex' + (done ? " on" : "") + '" data-k="' + key + '" data-st="' + (e[4] || 2.5) + '" style="--i:' + i + '">' +
+      '<div class="ex-head"><span class="ex-n"><span class="ex-num">' + (i + 1) + '</span><span class="ex-tick">' + ICON.check + '</span></span>' +
+      '<span class="ex-txt"><b>' + esc(e[0]) + '</b>' + (e[2] ? '<small>' + esc(e[2]) + '</small>' : '') + '</span>' +
+      (e[1] ? '<span class="xset">' + esc(e[1]) + '</span>' : '<span></span>') + '</div>' +
+      (xph ? '<img class="ex-photo" src="' + xph.src + '" alt="' + esc(xph.alt) + '" decoding="async"' + (xph.r ? ' style="aspect-ratio:' + xph.r + ';width:min(100%,' + xph.w + 'px)"' : '') + '>' : '') +
+      '<div class="ex-ctl"><div class="ex-sets" role="group" aria-label="Series de ' + esc(e[0]) + '">' + sets + '</div>' +
+      '<div class="ex-w"><button class="stp" type="button" data-act="rstep" data-d="-1" data-k="' + key + '" aria-label="Menos peso">−</button>' +
+      '<label class="wf"><input class="wi" type="text" inputmode="decimal" autocomplete="off" data-k="' + key + '" aria-label="Peso en kilos: ' + esc(e[0]) + '" placeholder="0" value="' + (val == null ? "" : fmtKg(val)) + '"><span>kg</span></label>' +
+      '<button class="stp" type="button" data-act="rstep" data-d="1" data-k="' + key + '" aria-label="Más peso">+</button></div></div>' +
+      '<p class="ex-hint" id="eh-' + key + '">' + esc(exHint(rid, e)) + '</p></article>';
+  }
+  function cardioCard(rid, c) {
+    var on = cLog(rid).indexOf(c.id) >= 0;
+    return '<button class="cc' + (on ? " on" : "") + '" type="button" data-act="rcardio" data-c="' + c.id + '" aria-pressed="' + on + '">' +
+      '<span class="cc-art">' + picto(c.picto) + '</span>' +
+      '<span class="cc-txt"><b>' + esc(c.name) + (c.sub ? ' <em>' + esc(c.sub) + '</em>' : '') + '</b>' + (c.nivel ? '<small>' + esc(c.nivel) + '</small>' : '') + (c.pts && c.pts.length ? '<small>' + c.pts.map(esc).join(" · ") + '</small>' : '') +
+      (c.nota ? '<small>' + esc(c.nota) + '</small>' : '') + '</span>' +
+      '<span class="tick">' + ICON.check + '</span></button>';
+  }
+  function rutinaView(rid) {
+    var it = xItem(rid), total = it.ex.length;
+    return top(it.name, "#ejercicio") +
+      '<main><h1 class="sr">' + esc(it.full) + '</h1>' +
+      '<section class="hero rhero" id="rhero">' +
+      '<div class="hero-grid">' +
+      '<div class="hero-date"><span class="pill">' + esc(it.full) + '</span><span class="rart">' + picto(it.picto) + '</span><span class="dow rname">' + esc(it.name) + '</span><span class="mon rsub">' + esc(it.sub) + '</span></div>' +
+      '<div class="hero-ring"><div class="ring" data-ring>' + ringSVG(total) + '<div class="ring-c"><span class="ring-n tnum" id="rk">0</span><span class="ring-u">de ' + total + '</span></div></div><span class="pill rpill" id="r-pill" hidden></span></div>' +
+      '</div>' +
+      '<div class="hchips two"><div class="hchip"><small>Series de hoy</small><b id="r-series">' + rCount(T.iso, rid) + ' de ' + rTotal(it) + '</b></div><div class="hchip"><small>Cardio de hoy</small><b id="r-cardio">—</b></div></div>' +
+      '</section>' +
+      '<section class="rlist" aria-label="Ejercicios">' + it.ex.map(function (e, i) { return exCard(rid, e, i); }).join("") + '</section>' +
+      (cardioList().length ? '<section class="slot rcard"><div class="slot-head"><h2>Cardio</h2><span class="slot-meta">' + (needsCardio(it) ? 'Obligatorio · sugerido ' : 'Sugerido: ') + esc(it.cardio) + '</span></div><div class="cgrid">' +
+        cardioList().map(function (c) { return cardioCard(rid, c); }).join("") + '</div></section>' : '') +
+      '</main>';
+  }
+  // aviso de la rutina: falta el cardio o ya está completa
+  function paintRutinaStatus() {
+    var it = curR && xItem(curR);
+    if (!it) return;
+    var l = rLog(T.iso, curR);
+    var allEx = it.ex.every(function (e) { return rSets(l, e) >= exSets(e); });
+    var sel = cLog(curR), names = [];
+    cardioList().forEach(function (c) { if (sel.indexOf(c.id) >= 0) names.push(c.name); });
+    var rc = document.getElementById("r-cardio");
+    if (rc) rc.textContent = names.length ? names.join(", ") : (needsCardio(it) ? "Pendiente" : "—");
+    var pill = document.getElementById("r-pill");
+    if (!pill) return;
+    var cmp = rComplete(T.iso, curR);
+    pill.classList.toggle("ok", cmp);
+    pill.hidden = !(allEx || cmp);
+    pill.innerHTML = cmp ? ICON.check + "Rutina completa" : "Falta elegir el cardio";
+  }
+  // refleja lo marcado hoy en la pantalla de la rutina sin redibujarla
+  function paintRutina() {
+    var it = curR && xItem(curR);
+    if (!it) return;
+    var l = rLog(T.iso, curR), doneEx = 0;
+    it.ex.forEach(function (e) {
+      var art = app.querySelector('.ex[data-k="' + e[3] + '"]');
+      if (!art) return;
+      var n = exSets(e), s = rSets(l, e), full = s >= n;
+      if (full) doneEx++;
+      art.classList.toggle("on", full);
+      var bs = art.querySelectorAll(".sb");
+      for (var k = 0; k < bs.length; k++) {
+        bs[k].classList.toggle("on", k < s);
+        bs[k].setAttribute("aria-pressed", k < s ? "true" : "false");
+      }
+      art.querySelector(".ex-hint").textContent = exHint(curR, e);
+    });
+    var rings = app.querySelectorAll("#rhero [data-ring]");
+    for (var i = 0; i < rings.length; i++) setArcs(rings[i]);
+    countTo(document.getElementById("rk"), doneEx, 400);
+    var rs = document.getElementById("r-series");
+    if (rs) rs.textContent = rCount(T.iso, curR) + " de " + rTotal(it);
+    var sel = cLog(curR);
+    cardioList().forEach(function (c) {
+      var el = app.querySelector('.cc[data-c="' + c.id + '"]');
+      var on = sel.indexOf(c.id) >= 0;
+      if (el) { el.classList.toggle("on", on); el.setAttribute("aria-pressed", on ? "true" : "false"); }
+    });
+    paintRutinaStatus();
+  }
+  function findEx(it, key) {
+    for (var i = 0; i < it.ex.length; i++) if (it.ex[i][3] === key) return it.ex[i];
+    return null;
+  }
+  // tocar una palomita registra esa serie; tocar una ya hecha la deshace (y las que siguen)
+  function rset(key, k, art) {
+    var rid = curR, it = xItem(rid), e = findEx(it, key);
+    if (!e) return;
+    var cur = rSets(rLog(T.iso, rid), e);
+    var target = k <= cur ? k - 1 : k;
+    var kg = parseKg(art.querySelector(".wi").value);
+    if (isNaN(kg)) kg = null;
+    rPut(rid, e, target, kg);
+    if (target > 0 && kg !== null) setWeight(key, kg);
+    savePlan();
+    paintRutina();
+  }
+  // el peso se guarda por ejercicio: lo ven todas las rutinas donde se repite
+  function onWeight(el, final) {
+    var key = el.getAttribute("data-k");
+    if (!curR) return;
+    var kg = parseKg(el.value);
+    if (isNaN(kg)) return;
+    if (kg === null && !final) return;
+    setWeight(key, kg);
+    var it = xItem(curR), e = findEx(it, key), l = rLog(T.iso, curR);
+    if (e && l && l[key] !== undefined) {
+      if (l[key] && typeof l[key] === "object") l[key].kg = kg; else l[key] = { s: exSets(e), kg: kg };
+    }
+    savePlan();
+    var h = document.getElementById("eh-" + key);
+    if (h && e) h.textContent = exHint(curR, e);
+  }
+  function rstep(key, dir, art) {
+    var input = art.querySelector(".wi");
+    var cur = parseKg(input.value);
+    if (cur === null || isNaN(cur)) cur = S.wt[key] ? S.wt[key].kg : 0;
+    var step = Number(art.getAttribute("data-st")) || 2.5;
+    input.value = fmtKg(Math.max(0, Math.round((cur + dir * step) * 100) / 100));
+    onWeight(input, true);
+  }
+  function rcardio(cid) {
+    var d = S.xl[T.iso] = S.xl[T.iso] || {};
+    d.c = d.c || {};
+    var l = d.c[curR] = d.c[curR] || [];
+    var i = l.indexOf(cid);
+    if (i >= 0) l.splice(i, 1); else l.push(cid);
+    tidyDay();
+    savePlan();
+    paintRutina();
+  }
+
+  /* ---------- resumen de hoy (inicio de Macarena): calorías, progreso y pasos ---------- */
+  function cardioById(id) {
+    var l = cardioList();
+    for (var i = 0; i < l.length; i++) if (l[i].id === id) return l[i];
+    return null;
+  }
+  // minutos sugeridos de un texto como "15–20 min (moderado)"
+  function parseMin(s) {
+    var m = /(\d+)(?:\s*[–-]\s*(\d+))?/.exec(s || "");
+    if (!m) return 15;
+    return m[2] ? (Number(m[1]) + Number(m[2])) / 2 : Number(m[1]);
+  }
+  // pasos escritos o pegados ("8,432", "8432", "pasos: 8.432"); null si no hay número
+  function parseSteps(v) {
+    var m = /\d[\d.,\s\u00a0]*/.exec(String(v == null ? "" : v));
+    if (!m) return null;
+    var s = m[0].replace(/[\s\u00a0]+$/g, "").replace(/[\s\u00a0]/g, "");
+    if (/^\d{1,3}([.,]\d{3})+$/.test(s)) s = s.replace(/[.,]/g, "");
+    else s = s.replace(",", ".");
+    var n = parseFloat(s);
+    return isFinite(n) && n >= 0 && n < 200000 ? Math.round(n) : null;
+  }
+  // estimación de calorías quemadas por actividad (no incluye el metabolismo en reposo)
+  function dashData() {
+    var cfg = PLANS[S.profile].dash, kg = cfg.kg;
+    var t = totals(), n = count();
+    var steps = S.steps[T.iso] || 0;
+    var series = 0, seriesTotal = 0, names = [], kcalCardio = 0, pending = false;
+    body().forEach(function (b) {
+      if (!b.ex) return;
+      var c = rCount(T.iso, b.id);
+      if (c > 0) { series += c; seriesTotal += rTotal(b); names.push(b.name); }
+      if (c > 0 && c >= rTotal(b) && needsCardio(b) && cLog(b.id).length === 0) pending = true;
+      var sel = cLog(b.id);
+      if (sel.length) {
+        var met = 0;
+        sel.forEach(function (id) { var cc = cardioById(id); met += cc && cc.met ? cc.met : 5; });
+        kcalCardio += (met / sel.length) * kg * parseMin(b.cardio) / 60;
+      }
+    });
+    return {
+      cons: n ? t.kcal : 0, n: n, total: slots().length,
+      steps: steps, goal: cfg.stepGoal,
+      kSteps: Math.round(steps * 0.0006 * kg),
+      kRut: Math.round(series * 4 * kg * (2.5 / 60)),
+      kCar: Math.round(kcalCardio),
+      series: series, seriesTotal: seriesTotal, names: names, pending: pending
+    };
+  }
+  // consumidas y quemadas, pequeñas, dentro del rectángulo grande del saludo
+  function heroStatsHTML() {
+    var plan = PLANS[S.profile];
+    if (!plan.dash) return "";
+    var g = plan.goal || [0, 0];
+    return '<div class="hstats">' +
+      '<div class="hs"><small>Consumidas hoy</small><b><span id="d-cons" class="tnum">0</span><i>kcal</i></b>' +
+      '<span class="hbar" role="progressbar" aria-label="Calorías consumidas" aria-valuemin="0" aria-valuemax="' + g[1] + '"><i class="fill" id="d-cons-f"></i></span>' +
+      '<small class="hs-c" id="d-cons-c"></small></div>' +
+      '<div class="hs"><small>Quemadas · aprox.</small><b><span id="d-burn" class="tnum">0</span><i>kcal</i></b></div>' +
+      '</div>';
+  }
+  function dashProgressHTML() {
+    var plan = PLANS[S.profile];
+    if (!plan.dash) return "";
+    return '<section class="dash" aria-label="Progreso de hoy">' +
+      '<div class="dc prog"><h2>Progreso de hoy</h2>' +
+      '<div class="pr"><div class="pr-top"><span>Comida</span><b id="p-food-v"></b></div><div class="bar" role="progressbar" aria-label="Comida"><i class="fill" id="p-food-f"></i></div></div>' +
+      '<div class="pr"><div class="pr-top"><span id="p-rut-l">Rutina</span><b id="p-rut-v"></b></div><div class="bar" role="progressbar" aria-label="Rutina"><i class="fill" id="p-rut-f"></i></div></div>' +
+      '<p class="burn-note">Quemadas por pasos <b id="d-bs">0</b> · rutina <b id="d-br">0</b> · cardio <b id="d-bc">0</b> kcal</p>' +
+      '<div class="sin"><label for="stepsInput">Pasos de hoy</label><div class="sbox"><input id="stepsInput" type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="' + (S.steps[T.iso] || "") + '"><span>pasos</span></div></div>' +
+      '<button class="link" type="button" id="hbtn" data-act="health" aria-expanded="false" aria-controls="hw" style="justify-self:start">Traer pasos de la app Salud</button>' +
+      '<div class="detail-wrap" id="hw"><div class="detail-clip"><div class="detail-in"><div class="hnote">' +
+      '<p>Una página web no puede leer la app Salud del iPhone; solo una app instalada puede. Este atajo copia tus pasos con un toque y tú los pegas arriba.</p>' +
+      '<ol><li><span>En la app <b>Atajos</b>, crea un atajo nuevo.</span></li>' +
+      '<li><span>Agrega <b>Buscar muestras de salud</b>: tipo <b>Pasos</b>, fecha de inicio <b>es hoy</b>.</span></li>' +
+      '<li><span>Agrega <b>Calcular estadísticas</b>: <b>Suma</b> de esas muestras.</span></li>' +
+      '<li><span>Agrega <b>Copiar en el portapapeles</b>.</span></li>' +
+            '<li><span>Ponle nombre "Pasos" y agrégalo a tu pantalla de inicio. Tócalo para copiar tus pasos, abre esta app y, en el campo de pasos, mantén presionado y elige <b>Pegar</b>.</span></li></ol>' +
+            '<p>Los pasos se actualizan cuando los pegas o los escribes; no es automático. Las calorías quemadas son una estimación: pasos, series de la rutina y cardio.</p>' +
+      '</div></div></div></div>' +
+      '</div></section>';
+  }
+  function setBar(id, ratio) {
+    var el = document.getElementById(id);
+    if (el) el.style.setProperty("--v", Math.max(0, Math.min(1, ratio)).toFixed(3));
+  }
+  function setTxt(id, txt) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = txt;
+  }
+  function paintDash() {
+    if (!document.getElementById("d-cons")) return;
+    var plan = PLANS[S.profile], g = plan.goal || [0, 0], d = dashData();
+    var burn = d.kSteps + d.kRut + d.kCar;
+    countTo(document.getElementById("d-cons"), d.cons, 700);
+    countTo(document.getElementById("d-burn"), burn, 700);
+    setBar("d-cons-f", g[1] ? d.cons / g[1] : 0);
+    var cap;
+    if (d.n < d.total) cap = "Meta " + fmt(g[0]) + "–" + fmt(g[1]) + " kcal";
+    else if (d.cons < g[0]) cap = fmt(g[0] - d.cons) + " bajo la meta";
+    else if (d.cons > g[1]) cap = fmt(d.cons - g[1]) + " sobre la meta";
+    else cap = "Dentro de la meta";
+    setTxt("d-cons-c", cap);
+    setTxt("d-bs", fmt(d.kSteps));
+    setTxt("d-br", fmt(d.kRut));
+    setTxt("d-bc", fmt(d.kCar));
+    setTxt("p-food-v", d.n + " de " + d.total + " tiempos");
+    setBar("p-food-f", d.total ? d.n / d.total : 0);
+    setTxt("p-rut-l", d.names.length ? d.names.join(" y ") : "Rutina");
+    var rv = d.seriesTotal ? d.series + " de " + d.seriesTotal + " series" : "Sin iniciar";
+    if (d.seriesTotal && d.series >= d.seriesTotal) rv += d.pending ? " · falta cardio" : " · completa";
+    setTxt("p-rut-v", rv);
+    setBar("p-rut-f", d.seriesTotal ? d.series / d.seriesTotal : 0);
+  }
+  function bootDash() {
+    if (!document.getElementById("d-cons")) return;
+    requestAnimationFrame(function () { requestAnimationFrame(paintDash); });
+  }
+  function toggleHealth() {
+    var w = document.getElementById("hw"), b = document.getElementById("hbtn");
+    if (!w) return;
+    var open = !w.classList.contains("open");
+    w.classList.toggle("open", open);
+    if (b) b.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  /* ---------- movimiento ---------- */
+  var RM = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: false };
+  function reduce() { return RM.matches; }
+  var EASE = "cubic-bezier(0.23, 1, 0.32, 1)";
+
+  // al cambiar de pantalla: entra desde la derecha al avanzar y desde la izquierda al volver
+  function enter(dir) {
+    if (!app.animate) return;
+    var dx = reduce() ? 0 : (dir >= 0 ? 18 : -18);
+    app.animate(
+      [{ opacity: 0, transform: "translateX(" + dx + "px)" }, { opacity: 1, transform: "translateX(0)" }],
+      { duration: dx ? 260 : 180, easing: EASE }
+    );
+  }
+  function swapIn(el) {
+    if (!el.animate) return;
+    el.animate(
+      reduce() ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 0, transform: "translateY(10px)" }, { opacity: 1, transform: "translateY(0)" }],
+      { duration: 240, easing: EASE }
+    );
+  }
+  // número que cuenta hasta su valor
+  function countTo(el, to, dur) {
+    if (!el) return;
+    var from = el._v || 0;
+    if (el._raf) cancelAnimationFrame(el._raf);
+    if (reduce() || from === to) { el.textContent = fmt(to); el._v = to; return; }
+    var t0 = null;
+    function step(t) {
+      if (t0 === null) t0 = t;
+      var k = Math.min(1, (t - t0) / dur);
+      var e = 1 - Math.pow(1 - k, 3);
+      var v = Math.round(from + (to - from) * e);
+      el.textContent = fmt(v);
+      el._v = v;
+      if (k < 1) el._raf = requestAnimationFrame(step);
+    }
+    el._raf = requestAnimationFrame(step);
+  }
+  // qué arcos del anillo están encendidos: lo elegido en comida, o los ejercicios hechos en una rutina
+  function ringFlags(scope) {
+    if (curR && scope.closest && scope.closest("#rhero")) {
+      var l = rLog(T.iso, curR);
+      return xItem(curR).ex.map(function (e) { return rSets(l, e) >= exSets(e); });
+    }
+    return slots().map(function (s) { return !!picked(s.k); });
+  }
+  function setArcs(scope) {
+    var fl = ringFlags(scope);
+    for (var i = 0; i < fl.length; i++) {
+      var el = scope.querySelector('.arc[data-i="' + i + '"]');
+      if (el) el.classList.toggle("on", fl[i]);
+    }
+  }
+  function bootRings() {
+    var rings = app.querySelectorAll("[data-ring]");
+    if (!rings.length) return;
+    var i;
+    for (i = 0; i < rings.length; i++) rings[i].classList.add("boot");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        for (var j = 0; j < rings.length; j++) setArcs(rings[j]);
+        countTo(document.getElementById("hk"), count() ? totals().kcal : 0, 700);
+        if (curR) countTo(document.getElementById("rk"), rDoneEx(T.iso, curR), 600);
+      });
+    });
+    setTimeout(function () {
+      for (var j = 0; j < rings.length; j++) rings[j].classList.remove("boot");
+    }, 1500);
+  }
+
+  /* ---------- render ---------- */
+  var app = document.getElementById("app");
+  var freshNext = false;
+  var curR = null;
+
+  function route() {
+    var h = (location.hash || "").replace("#", "");
+    if (h === "comida" || h === "ejercicio") return h;
+    if (/^rutina-[a-z0-9]+$/.test(h)) return h;
+    return "inicio";
+  }
+  function depth(r) { return r === "inicio" ? 0 : r.indexOf("rutina-") === 0 ? 2 : 1; }
+  var cur = route();
+  function screen() { return !S.profile || S.switching ? "pick" : route(); }
+
+  function render(dir, fresh) {
+    var f = fresh || freshNext;
+    freshNext = false;
+    var sc = screen();
+    curR = null;
+    if (sc.indexOf("rutina-") === 0) {
+      var rit = xItem(sc.slice(7));
+      if (rit && rit.ex) curR = rit.id; else sc = "ejercicio";
+    }
+    app.className = "shell" + (f ? " fresh" : "");
+    if (curR) {
+      var rr = xItem(curR);
+      app.style.setProperty("--accent", rr.c);
+      app.style.setProperty("--accent-ink", rr.ink);
+      app.style.setProperty("--accent-soft", "color-mix(in srgb, " + rr.c + " 16%, var(--surface))");
+    } else {
+      app.style.removeProperty("--accent");
+      app.style.removeProperty("--accent-ink");
+      app.style.removeProperty("--accent-soft");
+    }
+    app.innerHTML = sc === "pick" ? pickView() : sc === "comida" ? foodView() : sc === "ejercicio" ? exerciseView() : curR ? rutinaView(curR) : homeView();
+    if (sc === "comida") { updateNow(); bootRings(); }
+    if (curR) paintRutinaStatus();
+    if (sc === "inicio" || curR) bootRings();
+    if (sc === "inicio") bootDash();
+    if (sc === "ejercicio") bootExercise();
+    if (dir !== undefined && !f) enter(dir);
+  }
+
+  // marca "Ahora" en el tiempo de comida que corresponde a la hora actual
+  function updateNow() {
+    var now = null;
+    slots().forEach(function (s) { if (T.mins >= s.m) now = s.k; });
+    slots().forEach(function (s) {
+      var el = document.getElementById("now-" + s.k);
+      if (el) el.hidden = s.k !== now;
+    });
+  }
+
+  function checkDay() {
+    var n = today();
+    var changed = n.iso !== T.iso;
+    T = n;
+    if (changed) {
+      S.closed = {};
+      if (S.profile && !S.switching) render();
+    } else {
+      updateNow();
+    }
+  }
+  setInterval(checkDay, 30000);
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) checkDay(); });
+  window.addEventListener("focus", checkDay);
+
+  window.addEventListener("hashchange", function () {
+    var next = route();
+    var dir = depth(next) >= depth(cur) ? 1 : -1;
+    cur = next;
+    window.scrollTo(0, 0);
+    render(dir);
+  });
+
+  /* ---------- resumen del día (se actualiza sin redibujar) ---------- */
+  function updateSummary() {
+    var t = totals(), n = count();
+    function set(id, txt) { var el = document.getElementById(id); if (el) el.textContent = txt; }
+    countTo(document.getElementById("hk"), n ? t.kcal : 0, 450);
+    set("h-p", n ? t.p + " g" : "—");
+    set("h-c", n ? t.c + " g" : "—");
+    set("h-f", n ? t.f + " g" : "—");
+    var hero = document.getElementById("hero");
+    if (hero) setArcs(hero);
+    slots().forEach(function (s) {
+      var el = document.getElementById("sn-" + s.k);
+      if (el) el.classList.toggle("on", !!picked(s.k));
+    });
+  }
+
+  /* ---------- elegir platillo (solo se actualiza lo que cambia, para que las transiciones corran) ---------- */
+  function focusPick(slot, i) {
+    var el = app.querySelector('[data-fk="pick-' + slot + '-' + i + '"]');
+    if (el) el.focus({ preventScroll: true });
+  }
+
+  function syncSlot(slot, changed) {
+    var sec = app.querySelector('.slot[data-slot="' + slot + '"]');
+    if (!sec) return;
+    var sel = pickedIdx(slot);
+    var closed = !!S.closed[slot];
+    var btns = sec.querySelectorAll(".opt");
+    for (var b = 0; b < btns.length; b++) {
+      var on = sel === Number(btns[b].getAttribute("data-i"));
+      btns[b].classList.toggle("on", on);
+      btns[b].classList.toggle("closed", on && closed);
+      btns[b].setAttribute("aria-pressed", on ? "true" : "false");
+    }
+    var wrap = sec.querySelector(".detail-wrap");
+    var di = sec.querySelector(".detail-in");
+    clearTimeout(wrap._t);
+    if (sel != null) {
+      var wasOpen = wrap.classList.contains("open");
+      if (changed || !di.firstChild) {
+        di.innerHTML = detail(slotObj(slot), meals()[slot][sel]);
+        if (wasOpen) swapIn(di);
+      }
+      wrap.classList.toggle("open", !closed);
+    } else {
+      wrap.classList.remove("open");
+      wrap._t = setTimeout(function () {
+        if (!wrap.classList.contains("open")) di.innerHTML = "";
+      }, 360);
+    }
+  }
+
+  function pick(slot, i) {
+    var day = S.picks[T.iso] = S.picks[T.iso] || {};
+    var changed = day[slot] !== i;
+    if (changed) {
+      day[slot] = i;
+      delete S.closed[slot];
+      savePlan();
+    } else {
+      S.closed[slot] = !S.closed[slot];
+    }
+    syncSlot(slot, changed);
+    updateSummary();
+  }
+  function unpick(slot) {
+    var prev = pickedIdx(slot);
+    if (S.picks[T.iso]) delete S.picks[T.iso][slot];
+    delete S.closed[slot];
+    savePlan();
+    syncSlot(slot, true);
+    updateSummary();
+    if (prev != null) focusPick(slot, prev);
+  }
+  function hide(slot) {
+    var sel = pickedIdx(slot);
+    S.closed[slot] = true;
+    syncSlot(slot, false);
+    if (sel != null) focusPick(slot, sel);
+  }
+  function goSlot(slot) {
+    var sec = document.getElementById("slot-" + slot);
+    if (sec) sec.scrollIntoView({ behavior: reduce() ? "auto" : "smooth", block: "start" });
+  }
+
+  /* ---------- entrar a un perfil: una ola de su color sale del toque y llena la pantalla ---------- */
+  var wiping = false;
+  function commitProfile(id) {
+    S.switching = false;
+    setProfile(id);
+    window.scrollTo(0, 0);
+    freshNext = true;
+    if (route() !== "inicio") {
+      cur = "inicio";
+      location.hash = "#inicio";
+    } else {
+      render();
+    }
+  }
+  // una ola de color sale del toque y llena la pantalla; al terminar se hace el cambio y la ola se desvanece
+  function wipeTo(bg, x, y, commit) {
+    if (wiping) return;
+    wiping = true;
+    if (reduce() || !document.body.animate) {
+      commit();
+      wiping = false;
+      return;
+    }
+    var W = window.innerWidth, H = window.innerHeight;
+    var rad = Math.ceil(Math.sqrt(Math.pow(Math.max(x, W - x), 2) + Math.pow(Math.max(y, H - y), 2))) + 12;
+    var w = document.createElement("div");
+    w.className = "wipe";
+    w.style.background = bg;
+    w.style.clipPath = "circle(0px at " + x + "px " + y + "px)";
+    document.body.appendChild(w);
+    var a = w.animate(
+      [{ clipPath: "circle(0px at " + x + "px " + y + "px)" }, { clipPath: "circle(" + rad + "px at " + x + "px " + y + "px)" }],
+      { duration: 560, easing: EASE, fill: "forwards" }
+    );
+    a.onfinish = function () {
+      commit();
+      var b = w.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 380, easing: "ease-out", fill: "forwards" });
+      b.onfinish = function () { w.remove(); wiping = false; };
+    };
+  }
+  function enterProfile(id, x, y) {
+    if (!profileById(id)) return;
+    wipeTo(id === "angel" ? "var(--prof-a)" : "var(--prof-m)", x, y, function () { commitProfile(id); });
+  }
+
+  /* ---------- eventos ---------- */
+  // el relleno de color de una opción nace en el punto donde la tocas
+  app.addEventListener("pointerdown", function (e) {
+    var o = e.target.closest(".opt, .ex, .cc");
+    if (!o) return;
+    var r = o.getBoundingClientRect();
+    o.style.setProperty("--x", (e.clientX - r.left) + "px");
+    o.style.setProperty("--y", (e.clientY - r.top) + "px");
+  });
+
+  app.addEventListener("click", function (e) {
+    var t = e.target.closest("[data-act]");
+    if (!t) return;
+    var act = t.getAttribute("data-act");
+    var slot = t.getAttribute("data-slot");
+    if (act === "pick") {
+      if (e.detail === 0) { t.style.setProperty("--x", "50%"); t.style.setProperty("--y", "50%"); }
+      pick(slot, Number(t.getAttribute("data-i")));
+    }
+    else if (act === "unpick") unpick(slot);
+    else if (act === "hide") hide(slot);
+    else if (act === "goslot") goSlot(slot);
+    else if (act === "xpick") xpick(t.getAttribute("data-id"));
+    else if (act === "xopen") {
+      var px = e.clientX, py = e.clientY;
+      if (e.detail === 0 || (!px && !py)) {
+        var rc = t.getBoundingClientRect();
+        px = rc.left + rc.width / 2; py = rc.top + rc.height / 2;
+      }
+      openRoutine(t.getAttribute("data-id"), px, py);
+    }
+    else if (act === "rset") rset(t.getAttribute("data-k"), Number(t.getAttribute("data-n")), t.closest(".ex"));
+    else if (act === "rstep") rstep(t.getAttribute("data-k"), Number(t.getAttribute("data-d")), t.closest(".ex"));
+    else if (act === "rcardio") rcardio(t.getAttribute("data-c"));
+    else if (act === "health") toggleHealth();
+    else if (act === "enter") {
+      var x = e.clientX, y = e.clientY;
+      if (e.detail === 0 || (!x && !y)) {
+        var r = t.getBoundingClientRect();
+        x = r.left + r.width / 2; y = r.top + r.height / 2;
+      }
+      enterProfile(t.getAttribute("data-id"), x, y);
+    }
+    else if (act === "switch") { S.switching = true; window.scrollTo(0, 0); render(-1); }
+  });
+
+  // el peso de cada ejercicio se guarda al escribirlo
+  app.addEventListener("input", function (e) {
+    if (e.target.classList && e.target.classList.contains("wi")) onWeight(e.target, false);
+    if (e.target.id === "stepsInput") {
+      var n = parseSteps(e.target.value);
+      if (n === null && e.target.value.trim() !== "") return;
+      if (n === null) delete S.steps[T.iso]; else S.steps[T.iso] = n;
+      savePlan();
+      paintDash();
+    }
+  });
+  app.addEventListener("change", function (e) {
+    if (e.target.classList && e.target.classList.contains("wi")) onWeight(e.target, true);
+    if (e.target.id === "stepsInput") e.target.value = S.steps[T.iso] || "";
+  });
+  // al pegar desde un atajo ("pasos: 8,432") se queda solo el número
+  app.addEventListener("paste", function (e) {
+    if (e.target.id !== "stepsInput") return;
+    var txt = (e.clipboardData && e.clipboardData.getData("text")) || "";
+    var n = parseSteps(txt);
+    if (n === null) return;
+    e.preventDefault();
+    e.target.value = n;
+    S.steps[T.iso] = n;
+    savePlan();
+    paintDash();
+  });
+
+  render(undefined, screen() === "inicio");
+})();
+</script>
+
+<script>
+// modo sin conexión: la primera vez, abre la app con internet para que se guarde todo
+if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("sw.js").catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
